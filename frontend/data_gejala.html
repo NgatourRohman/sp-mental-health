@@ -1,0 +1,314 @@
+<script>
+    const role = localStorage.getItem("role");
+    if (!role) {
+        alert("Silakan login terlebih dahulu");
+        window.location.href = "index.html";
+    }
+</script>
+
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Data Gejala - Sistem Pakar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen">
+    <!-- Sidebar di-inject dari file terpisah -->
+    <div id="sidebar"></div>
+
+    <!-- Main: digeser kanan selebar sidebar -->
+    <main class="md:ml-64 p-6 md:p-10 min-h-screen">
+        <header class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold">Data Gejala</h1>
+            <p class="font-semibold text-gray-700 nama-admin">Nama Admin</p>
+        </header>
+
+        <section class="bg-white rounded-xl shadow-md p-6">
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm text-left text-gray-700">
+                    <thead class="bg-gray-200 text-gray-800 font-semibold">
+                        <tr>
+                            <th class="px-4 py-3">Kode</th>
+                            <th class="px-4 py-3 w-80">Nama Gejala</th>
+                            <th class="px-4 py-3">Kode Gangguan</th>
+                            <th class="px-4 py-3">Nama Gangguan</th>
+                            <th class="px-4 py-3">Status</th>
+                            <th class="px-4 py-3">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelGejala">
+                        <tr>
+                            <td colspan="6" class="px-6 py-4 text-center">Memuat data...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="mt-6 flex justify-between items-center">
+                <button onclick="cetakData()"
+                    class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600">Cetak Data</button>
+                <button id="tambahBtn" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">Tambah
+                    Data</button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal Form -->
+    <div id="modalGejala" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white p-6 rounded-lg w-full max-w-xl shadow-lg">
+            <h2 id="modalTitle" class="text-xl font-bold mb-4">Tambah Gejala</h2>
+            <form id="formGejala" class="space-y-4">
+                <input type="hidden" id="gejalaId" />
+                <div>
+                    <label class="block font-medium mb-1">Kode Gejala</label>
+                    <input type="text" id="kodeGejala" required class="w-full px-4 py-2 border rounded" />
+                </div>
+                <div>
+                    <label class="block font-medium mb-1">Nama Gejala</label>
+                    <input type="text" id="namaGejala" required class="w-full px-4 py-2 border rounded" />
+                </div>
+                <div>
+                    <label class="block font-medium mb-1">Gangguan</label>
+                    <select id="selectGangguan" required class="w-full px-4 py-2 border rounded">
+                        <option value="">-- Pilih Gangguan --</option>
+                    </select>
+                </div>
+                <div class="text-right space-x-2 pt-4">
+                    <button type="button" onclick="tutupModal()" class="px-4 py-2 bg-gray-300 rounded">Batal</button>
+                    <button type="submit"
+                        class="px-4 py-2 bg-teal-500 text-white rounded hover:bg-teal-600">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // ===== Inject Sidebar (pisah file & full height + link aktif) =====
+        (async function injectSidebar() {
+            try {
+                var resp = await fetch('admin_sidebar.html');
+                var html = await resp.text();
+                document.getElementById('sidebar').innerHTML = html;
+
+                // Set nama admin setelah inject
+                var adminNama = localStorage.getItem("nama") || "Admin";
+                var els = document.querySelectorAll(".nama-admin");
+                for (var i = 0; i < els.length; i++) {
+                    els[i].textContent = adminNama;
+                }
+
+                // Tandai link aktif
+                var currentPage = window.location.pathname.split("/").pop();
+                var links = document.querySelectorAll('#sidebar a[href]');
+                for (var j = 0; j < links.length; j++) {
+                    var linkHref = links[j].getAttribute('href');
+                    if (linkHref === currentPage) {
+                        links[j].classList.add('bg-teal-200', 'font-medium');
+                    } else {
+                        links[j].classList.remove('bg-teal-200');
+                    }
+                }
+
+                // Pastikan sidebar full height
+                document.getElementById('sidebar').classList.add('flex', 'flex-col', 'h-screen');
+            } catch (e) {
+                console.error('Gagal memuat sidebar:', e);
+            }
+        })();
+
+        // ====== Data & UI ======
+        var gangguanMap = {}; // kode => nama
+
+        document.addEventListener("DOMContentLoaded", function () {
+            // Nama admin di header (di luar sidebar)
+            var adminNama = localStorage.getItem("nama") || "Admin";
+            var els = document.querySelectorAll(".nama-admin");
+            for (var i = 0; i < els.length; i++) els[i].textContent = adminNama;
+
+            // Load data utama
+            loadGangguanDropdown().then(loadGejala);
+            document.getElementById("tambahBtn").addEventListener("click", function () {
+                bukaModal();
+            });
+        });
+
+        async function loadGangguanDropdown() {
+            try {
+                var res = await fetch("php/gangguan_get.php");
+                var data = await res.json();
+                var select = document.getElementById("selectGangguan");
+                for (var i = 0; i < data.length; i++) {
+                    var item = data[i];
+                    gangguanMap[item.kode] = item.nama;
+                    var opt = document.createElement("option");
+                    opt.value = item.kode;
+                    opt.textContent = item.kode + " - " + item.nama;
+                    select.appendChild(opt);
+                }
+            } catch (e) {
+                console.error("Gagal memuat dropdown gangguan:", e);
+            }
+        }
+
+        async function loadGejala() {
+            try {
+                var res = await fetch("php/gejala_get.php");
+                var data = await res.json();
+                localStorage.setItem("data_gejala", JSON.stringify(data));
+
+                var tbody = document.getElementById("tabelGejala");
+                tbody.innerHTML = "";
+
+                for (var i = 0; i < data.length; i++) {
+                    var g = data[i];
+                    var row = document.createElement("tr");
+                    row.classList.add("border-b");
+
+                    var statusBadge = (String(g.aktif) === "1") ?
+                        "<span class='px-2 py-1 bg-green-200 text-green-800 rounded-full text-xs'>Aktif</span>" :
+                        "<span class='px-2 py-1 bg-gray-200 text-gray-700 rounded-full text-xs'>Nonaktif</span>";
+
+                    row.innerHTML =
+                        '<td class="px-4 py-3">' + g.kode_gejala + '</td>' +
+                        '<td class="px-4 py-3">' + g.nama_gejala + '</td>' +
+                        '<td class="px-4 py-3">' + g.kode_gangguan + '</td>' +
+                        '<td class="px-4 py-3">' + (gangguanMap[g.kode_gangguan] || '-') + '</td>' +
+                        '<td class="px-4 py-3">' + statusBadge + '</td>' +
+                        '<td class="px-4 py-3 space-x-2">' +
+                        '<button onclick="toggleStatus(' + g.id + ',' + g.aktif +
+                        ')" class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600">' + (String(g
+                            .aktif) === "1" ? "Nonaktifkan" : "Aktifkan") + '</button> ' +
+                        '<button onclick="editGejala(' + g.id +
+                        ')" class="px-3 py-1 bg-yellow-400 text-white rounded hover:bg-yellow-500">Ubah</button> ' +
+                        '<button onclick="hapusGejala(' + g.id +
+                        ')" class="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600">Hapus</button>' +
+                        '</td>';
+
+                    tbody.appendChild(row);
+                }
+            } catch (e) {
+                console.error("Gagal memuat gejala:", e);
+                var tbody = document.getElementById("tabelGejala");
+                tbody.innerHTML =
+                    '<tr><td colspan="6" class="px-6 py-4 text-center text-red-500">Gagal memuat data.</td></tr>';
+            }
+        }
+
+        function bukaModal(data) {
+            document.getElementById("modalTitle").textContent = data ? "Ubah Gejala" : "Tambah Gejala";
+            document.getElementById("gejalaId").value = data ? data.id : "";
+            document.getElementById("kodeGejala").value = data ? data.kode_gejala : "";
+            document.getElementById("namaGejala").value = data ? data.nama_gejala : "";
+            document.getElementById("selectGangguan").value = data ? data.kode_gangguan : "";
+            document.getElementById("modalGejala").classList.remove("hidden");
+        }
+
+        function tutupModal() {
+            document.getElementById("modalGejala").classList.add("hidden");
+        }
+
+        function editGejala(id) {
+            var data = JSON.parse(localStorage.getItem("data_gejala") || "[]");
+            var g = null;
+            for (var i = 0; i < data.length; i++) {
+                if (String(data[i].id) === String(id)) {
+                    g = data[i];
+                    break;
+                }
+            }
+            if (!g) {
+                alert("Data tidak ditemukan.");
+                return;
+            }
+            bukaModal(g);
+        }
+
+        document.getElementById("formGejala").addEventListener("submit", async function (e) {
+            e.preventDefault();
+            var form = new FormData();
+            var id = document.getElementById("gejalaId").value;
+            form.append("id", id);
+            form.append("kode_gejala", document.getElementById("kodeGejala").value);
+            form.append("nama_gejala", document.getElementById("namaGejala").value);
+            form.append("kode_gangguan", document.getElementById("selectGangguan").value);
+
+            var res = await fetch(id ? "php/gejala_update.php" : "php/gejala_add.php", {
+                method: "POST",
+                body: form
+            });
+            var result = await res.json();
+            alert(result.message);
+            if (result.status === "success") {
+                tutupModal();
+                location.reload();
+            }
+        });
+
+        async function toggleStatus(id, currentStatus) {
+            var form = new FormData();
+            form.append("id", id);
+            form.append("aktif", String(currentStatus) === "1" ? 0 : 1);
+
+            var res = await fetch("php/gejala_toggle_status.php", {
+                method: "POST",
+                body: form
+            });
+            var result = await res.json();
+            alert(result.message);
+            if (result.status === "success") location.reload();
+        }
+
+        async function hapusGejala(id) {
+            if (!confirm("Yakin ingin menghapus gejala ini?")) return;
+            var form = new FormData();
+            form.append("id", id);
+
+            var res = await fetch("php/gejala_delete.php", {
+                method: "POST",
+                body: form
+            });
+            var result = await res.json();
+            alert(result.message);
+            if (result.status === "success") location.reload();
+        }
+
+        function logout() {
+            localStorage.clear();
+            alert("Anda telah logout.");
+            window.location.href = "index.html";
+        }
+
+        // ===== CETAK ke file terpisah =====
+        function cetakData() {
+            var data = JSON.parse(localStorage.getItem("data_gejala") || "[]");
+            if (!Array.isArray(data) || data.length === 0) {
+                alert("Belum ada data untuk dicetak.");
+                return;
+            }
+            var siapCetak = data.map(function (g) {
+                return {
+                    kode_gejala: g.kode_gejala,
+                    nama_gejala: g.nama_gejala,
+                    kode_gangguan: g.kode_gangguan,
+                    nama_gangguan: gangguanMap[g.kode_gangguan] || "-"
+                };
+            });
+
+            localStorage.setItem("laporanGejala", JSON.stringify(siapCetak));
+            var w = window.open("laporan_gejala.html", "_blank");
+            if (!w) alert("Pop-up diblokir. Mohon izinkan pop-up untuk situs ini.");
+        }
+    </script>
+</body>
+
+</html>

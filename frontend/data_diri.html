@@ -1,0 +1,214 @@
+<script>
+    const role = localStorage.getItem("role");
+    if (!role) {
+        alert("Silakan login terlebih dahulu");
+        window.location.href = "index.html";
+    }
+</script>
+
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Data Diri - Sistem Pakar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen">
+    <!-- Injected Sidebar -->
+    <div id="sidebar"></div>
+
+    <!-- Main Content -->
+    <main class="p-10 ml-64">
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold">Data Diri</h1>
+            <div class="text-right">
+                <p id="headerNama" class="font-semibold text-gray-700 nama-siswa">Nama User</p>
+            </div>
+        </header>
+
+        <div class="flex justify-center">
+            <section class="bg-white rounded-xl shadow-md p-6 max-w-3xl w-full">
+                <h2 class="text-xl font-semibold mb-6 text-center">Form Data Diri</h2>
+                <form id="formDataDiri" class="space-y-5">
+                    <input type="hidden" name="user_email" id="user_email" />
+
+                    <div>
+                        <label for="nama" class="block font-medium text-gray-700 mb-1">Nama</label>
+                        <input type="text" id="nama" name="nama"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-400"
+                            placeholder="Masukkan nama lengkap" required />
+                    </div>
+
+                    <div>
+                        <label for="tgl_lahir" class="block font-medium text-gray-700 mb-1">Tanggal Lahir</label>
+                        <input type="date" id="tgl_lahir" name="tgl_lahir"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-400"
+                            required />
+                    </div>
+
+                    <div>
+                        <label for="jk" class="block font-medium text-gray-700 mb-1">Jenis Kelamin</label>
+                        <select id="jk" name="jenis_kelamin"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-400"
+                            required>
+                            <option value="">Pilih Jenis Kelamin</option>
+                            <option value="Laki-laki">Laki-laki</option>
+                            <option value="Perempuan">Perempuan</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="alamat" class="block font-medium text-gray-700 mb-1">Alamat</label>
+                        <input type="text" id="alamat" name="alamat"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-400"
+                            placeholder="Masukkan alamat" required />
+                    </div>
+
+                    <div>
+                        <label for="notelp" class="block font-medium text-gray-700 mb-1">No. Telp</label>
+                        <input type="text" id="notelp" name="no_telp"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-400"
+                            placeholder="Contoh: 081234567890" required />
+                    </div>
+
+                    <div class="flex justify-end space-x-3 pt-4">
+                        <button id="btnSimpan" type="submit"
+                            class="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600">Simpan</button>
+                        <button id="btnUbah" type="button"
+                            class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 hidden">Ubah</button>
+                    </div>
+                </form>
+            </section>
+        </div>
+    </main>
+
+    <script>
+        // Inject sidebar (user_sidebar.html), set nama, dan tandai link aktif
+        (async function injectSidebar() {
+            try {
+                const resp = await fetch('user_sidebar.html', {
+                    cache: 'no-store'
+                });
+                const html = await resp.text();
+                document.getElementById('sidebar').innerHTML = html;
+
+                const nama = localStorage.getItem("nama") || "Siswa";
+                document.querySelectorAll(".nama-siswa").forEach(el => el.textContent = nama);
+
+                // Penanda link aktif berdasarkan file saat ini
+                const currentPage = window.location.pathname.split("/").pop() || 'data_diri.html';
+                document.querySelectorAll('#sidebar a[href]').forEach(a => {
+                    if (a.getAttribute('href') === currentPage) {
+                        a.classList.add('bg-teal-200', 'font-medium');
+                    } else {
+                        a.classList.remove('bg-teal-200');
+                    }
+                });
+            } catch (e) {
+                console.error('Gagal memuat sidebar:', e);
+            }
+        })();
+
+        // -------- App Logic: Data Diri --------
+        document.addEventListener("DOMContentLoaded", async () => {
+            const nama = localStorage.getItem("nama") || "Siswa";
+            const email = localStorage.getItem("email") || "user@example.com";
+
+            // Set nama ke header (dan elemen lain kalau ada)
+            document.querySelectorAll(".nama-siswa").forEach(el => el.textContent = nama);
+
+            // Set email ke input hidden
+            const emailInput = document.getElementById("user_email");
+            if (emailInput) emailInput.value = email;
+
+            // Ambil data existing
+            try {
+                const res = await fetch("php/data_diri_get.php?email=" + encodeURIComponent(email));
+                const data = await res.json();
+
+                if (data.status === "success" && data.data) {
+                    document.getElementById("nama").value = data.data.nama || "";
+                    document.getElementById("tgl_lahir").value = data.data.tgl_lahir || "";
+                    document.getElementById("jk").value = data.data.jenis_kelamin || "";
+                    document.getElementById("alamat").value = data.data.alamat || "";
+                    document.getElementById("notelp").value = data.data.no_telp || "";
+
+                    // Toggle tombol
+                    document.getElementById("btnSimpan").classList.add("hidden");
+                    document.getElementById("btnUbah").classList.remove("hidden");
+                }
+            } catch (err) {
+                console.error("Gagal ambil data diri:", err);
+            }
+
+            // SIMPAN (INSERT)
+            const form = document.getElementById("formDataDiri");
+            if (form) {
+                form.addEventListener("submit", async function (e) {
+                    e.preventDefault();
+                    const formData = new FormData(this);
+                    try {
+                        const res = await fetch("php/simpan_data_diri.php", {
+                            method: "POST",
+                            body: formData
+                        });
+                        const result = await res.json();
+                        if (result.status === "success") {
+                            alert("Data berhasil disimpan!");
+                            location.reload();
+                        } else {
+                            alert("Gagal menyimpan data: " + (result.message ||
+                                "Unknown error"));
+                        }
+                    } catch (e) {
+                        alert("Terjadi kesalahan jaringan saat menyimpan data.");
+                        console.error(e);
+                    }
+                });
+            }
+
+            // UBAH (UPDATE)
+            const btnUbah = document.getElementById("btnUbah");
+            if (btnUbah) {
+                btnUbah.addEventListener("click", async function () {
+                    const formData = new FormData(document.getElementById("formDataDiri"));
+                    try {
+                        const res = await fetch("php/simpan_data_diri.php", {
+                            method: "POST",
+                            body: formData
+                        });
+                        const result = await res.json();
+                        if (result.status === "success") {
+                            alert("Data berhasil diperbarui!");
+                            location.reload();
+                        } else {
+                            alert("Gagal menyimpan data: " + (result.message ||
+                                "Unknown error"));
+                        }
+                    } catch (e) {
+                        alert("Terjadi kesalahan jaringan saat memperbarui data.");
+                        console.error(e);
+                    }
+                });
+            }
+        });
+
+        // Dipanggil dari tombol di sidebar
+        function logout() {
+            localStorage.clear();
+            alert("Anda telah logout.");
+            window.location.href = "index.html";
+        }
+    </script>
+</body>
+
+</html>

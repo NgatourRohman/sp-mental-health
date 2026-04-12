@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Cetak Hasil Diagnosa</title>
+    <style>
+        /* Pengaturan halaman cetak */
+        @page {
+            size: A4 portrait;
+            margin: 15mm;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12px;
+            color: #111;
+            line-height: 1.5;
+        }
+
+        /* Hindari spasi atas berlebih agar halaman 1 tidak kosong */
+        .container {
+            padding: 10mm 14mm 0 14mm;
+        }
+
+        /* Header kop surat */
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header img {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+        }
+
+        .title {
+            flex: 1;
+            text-align: center;
+        }
+
+        .title h3 {
+            margin: 0;
+            font-size: 18px;
+            letter-spacing: 0.3px;
+        }
+
+        .alamat {
+            margin-top: 2px;
+            font-size: 11px;
+            color: #444;
+            line-height: 1.4;
+        }
+
+        /* Garis pemisah tipis (bukan border tabel) */
+        .divider {
+            height: 1px;
+            background: #ddd;
+            margin: 10px 0 0 0;
+        }
+
+        /* Judul laporan + meta */
+        h2 {
+            text-align: center;
+            margin: 16px 0 8px;
+            font-size: 16px;
+            letter-spacing: 0.3px;
+        }
+
+        .meta {
+            text-align: center;
+            font-size: 11px;
+            color: #555;
+            margin-bottom: 14px;
+        }
+
+        /* Blok data ringkas (tanpa border) */
+        .section {
+            margin-top: 14px;
+        }
+
+        .row {
+            display: flex;
+            gap: 12px;
+            margin: 4px 0;
+        }
+
+        .label {
+            width: 150px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .value {
+            flex: 1;
+            color: #111;
+        }
+
+        /* Kotak konten panjang (tanpa border, hanya background lembut opsional) */
+        .panel {
+            padding: 10px 0;
+        }
+
+        /* List saran bersih */
+        .list {
+            margin: 0;
+            padding-left: 18px;
+        }
+
+        .list li {
+            margin: 2px 0;
+        }
+
+        /* Tanda tangan */
+        .signature {
+            margin-top: 26px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .ttd {
+            width: 260px;
+            text-align: center;
+        }
+
+        .ttd .space {
+            height: 56px;
+        }
+
+        @media print {
+
+            /* Pastikan warna teks tetap */
+            * {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <img src="logo.png" alt="Logo">
+            <div class="title">
+                <h3>PASKIBRA SMP NEGERI 35</h3>
+                <div class="alamat">
+                    Jl. K.H. Raiman No.3, RT.6/RW.3, Balekambang, Kec. Kramat Jati, Kota Jakarta Timur,<br>
+                    Daerah Khusus Ibukota Jakarta 13530
+                </div>
+            </div>
+        </div>
+        <div class="divider"></div>
+
+        <h2>HASIL DIAGNOSA</h2>
+        <div class="meta" id="metaInfo">Memuat…</div>
+
+        <!-- Identitas Ringkas -->
+        <div class="section">
+            <div class="row">
+                <div class="label">Nama</div>
+                <div class="value" id="nama">-</div>
+            </div>
+            <div class="row">
+                <div class="label">Jenis Kelamin</div>
+                <div class="value" id="jenis_kelamin">-</div>
+            </div>
+            <div class="row">
+                <div class="label">Kondisi</div>
+                <div class="value"><strong id="kondisi">-</strong></div>
+            </div>
+        </div>
+
+        <!-- Saran -->
+        <div class="section">
+            <div class="row" style="align-items: flex-start;">
+                <div class="label">Saran</div>
+                <div class="value panel">
+                    <ul id="saran" class="list"></ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rekomendasi (opsional) -->
+        <div id="blok-rekomendasi" class="section" style="display:none;">
+            <div class="row" style="align-items: flex-start;">
+                <div class="label">Rekomendasi</div>
+                <div class="value panel" id="rekomendasi"></div>
+            </div>
+        </div>
+
+        <!-- Deskripsi (opsional) -->
+        <div id="blok-deskripsi" class="section" style="display:none;">
+            <div class="row" style="align-items: flex-start;">
+                <div class="label">Deskripsi</div>
+                <div class="value panel" id="deskripsi"></div>
+            </div>
+        </div>
+
+        <!-- Tanda tangan -->
+        <div class="signature">
+            <div class="ttd">
+                <div id="tanggalCetak">Jakarta, -</div>
+                <div>Pelatih Paskibra</div>
+                <div class="space"></div>
+                <div><strong>Maura Putri Prambudya</strong></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            'use strict';
+
+            function escapeHtml(str) {
+                str = (str == null ? "" : String(str));
+                return str
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
+
+            // Ambil data dari localStorage (diisi oleh hasil_diagnosa.html)
+            var raw = localStorage.getItem("laporanDiagnosaSiswa");
+            var data;
+            try {
+                data = JSON.parse(raw || "{}");
+            } catch (e) {
+                data = {};
+            }
+
+            // Meta
+            var admin = localStorage.getItem("nama") || "Admin";
+            var lokasi = localStorage.getItem("lokasiTTD") || "Jakarta";
+            var tanggalCetak = new Date().toLocaleDateString("id-ID", {
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric"
+            });
+            document.getElementById("metaInfo").textContent = "Dicetak oleh: " + admin + " · Tanggal: " +
+                tanggalCetak;
+            document.getElementById("tanggalCetak").textContent = escapeHtml(lokasi) + ", " + escapeHtml(
+                tanggalCetak);
+
+            // Isi field
+            document.getElementById("nama").textContent = escapeHtml(data.nama || "-");
+            document.getElementById("jenis_kelamin").textContent = escapeHtml(data.jenis_kelamin || "-");
+            document.getElementById("kondisi").textContent = escapeHtml(data.kondisi || "-");
+
+            var saranList = document.getElementById("saran");
+            var saranArr = Array.isArray(data.saran) ? data.saran : String(data.saran || "").split('\n');
+            saranList.innerHTML = "";
+            if (saranArr.length === 0 || (saranArr.length === 1 && saranArr[0].trim() === "")) {
+                var li = document.createElement("li");
+                li.textContent = "-";
+                saranList.appendChild(li);
+            } else {
+                for (var i = 0; i < saranArr.length; i++) {
+                    if (!saranArr[i]) continue;
+                    var li2 = document.createElement("li");
+                    li2.textContent = saranArr[i];
+                    saranList.appendChild(li2);
+                }
+            }
+
+            if (data.rekomendasi && String(data.rekomendasi).trim() !== "") {
+                document.getElementById("blok-rekomendasi").style.display = "";
+                document.getElementById("rekomendasi").textContent = data.rekomendasi;
+            }
+            if (data.deskripsi && String(data.deskripsi).trim() !== "") {
+                document.getElementById("blok-deskripsi").style.display = "";
+                document.getElementById("deskripsi").textContent = data.deskripsi;
+            }
+
+            // Cetak & tutup
+            window.print();
+            window.onafterprint = function () {
+                window.close();
+            };
+
+            // (opsional) bersihkan storage:
+            // localStorage.removeItem("laporanDiagnosaSiswa");
+        })();
+    </script>
+</body>
+
+</html>

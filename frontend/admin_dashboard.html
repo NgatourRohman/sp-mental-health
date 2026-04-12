@@ -1,0 +1,139 @@
+<script>
+    const role = localStorage.getItem("role");
+    if (!role) {
+        alert("Silakan login terlebih dahulu");
+        window.location.href = "index.html";
+    }
+</script>
+
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Admin - Sistem Pakar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen">
+    <!-- Sidebar diinject dari file terpisah -->
+    <div id="sidebar"></div>
+
+    <!-- Main Content: digeser kanan selebar sidebar -->
+    <main class="md:ml-64 p-6 md:p-10 min-h-screen">
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold">Dashboard</h1>
+            <div class="text-right">
+                <p class="font-semibold text-gray-700 nama-admin">Nama Admin</p>
+            </div>
+        </header>
+
+        <section class="mb-10">
+            <h2 class="text-xl font-semibold mb-2">Holla <span class="nama-admin">Admin!!</span></h2>
+            <p class="text-gray-600 max-w-2xl">
+                Selamat datang di dashboard! Di sini, Anda dapat mengelola semua aspek platform dengan mudah dan
+                efisien.
+            </p>
+        </section>
+
+        <!-- Statistik Card -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Card User -->
+            <div class="bg-white rounded-xl shadow-md p-6 text-center">
+                <div class="text-4xl mb-2">👤</div>
+                <h3 class="text-lg font-semibold">Total User</h3>
+                <p id="countUser" class="text-2xl font-bold mt-2">...</p>
+                <a href="data_user.html"
+                    class="mt-3 inline-block px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600">Lihat
+                    Data</a>
+            </div>
+
+            <!-- Card Gangguan -->
+            <div class="bg-white rounded-xl shadow-md p-6 text-center">
+                <div class="text-4xl mb-2">🧠</div>
+                <h3 class="text-lg font-semibold">Total Gangguan</h3>
+                <p id="countGangguan" class="text-2xl font-bold mt-2">...</p>
+                <a href="data_gangguan.html"
+                    class="mt-3 inline-block px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600">Lihat
+                    Data</a>
+            </div>
+
+            <!-- Card Gejala -->
+            <div class="bg-white rounded-xl shadow-md p-6 text-center">
+                <div class="text-4xl mb-2">📋</div>
+                <h3 class="text-lg font-semibold">Total Gejala</h3>
+                <p id="countGejala" class="text-2xl font-bold mt-2">...</p>
+                <a href="data_gejala.html"
+                    class="mt-3 inline-block px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600">Lihat
+                    Data</a>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // ===== Inject Sidebar (fixed & reusable) =====
+        (async function injectSidebar() {
+            try {
+                const resp = await fetch('admin_sidebar.html');
+                const html = await resp.text();
+                document.getElementById('sidebar').innerHTML = html;
+
+                // Set nama admin di sidebar setelah inject
+                const nama = localStorage.getItem("nama") || "Admin";
+                document.querySelectorAll(".nama-admin").forEach(el => el.textContent = nama);
+
+                // Tandai link aktif sesuai halaman
+                const path = (location.pathname || "").split("/").pop() || "admin_dashboard.html";
+                const links = document.querySelectorAll('#sidebar a[href]');
+                links.forEach(a => {
+                    const href = a.getAttribute('href');
+                    if (href && path === href) {
+                        a.classList.add('bg-teal-200');
+                    } else {
+                        a.classList.remove('bg-teal-200');
+                    }
+                });
+            } catch (e) {
+                console.error('Gagal memuat sidebar:', e);
+            }
+        })();
+
+        // ===== Data Dashboard =====
+        document.addEventListener("DOMContentLoaded", async () => {
+            const nama = localStorage.getItem("nama") || "Admin";
+            document.querySelectorAll(".nama-admin").forEach(el => el.textContent = nama);
+
+            try {
+                const res = await fetch("php/dashboard_stats.php");
+                const stats = await res.json();
+
+                document.getElementById("countUser").textContent =
+                    (stats.users !== null && stats.users !== undefined) ? stats.users : 0;
+
+                document.getElementById("countGangguan").textContent =
+                    (stats.gangguan !== null && stats.gangguan !== undefined) ? stats.gangguan : 0;
+
+                document.getElementById("countGejala").textContent =
+                    (stats.gejala !== null && stats.gejala !== undefined) ? stats.gejala : 0;
+            } catch (error) {
+                console.error("Gagal memuat data statistik:", error);
+            }
+        });
+
+        // Dipakai juga oleh tombol di sidebar
+        function logout() {
+            localStorage.clear();
+            alert("Anda telah logout.");
+            window.location.href = "index.html";
+        }
+    </script>
+</body>
+
+</html>

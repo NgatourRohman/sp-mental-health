@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Riwayat Diagnosa Pengguna</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+    }
+  </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen">
+
+  <!-- Cek Role Login -->
+  <script>
+    const role = localStorage.getItem("role");
+    if (!role) {
+      alert("Silakan login terlebih dahulu");
+      window.location.href = "index.html";
+    }
+  </script>
+
+  <!-- Header -->
+  <header class="bg-white shadow-md px-6 py-4 flex justify-between items-center sticky top-0 z-10">
+    <h1 class="text-xl md:text-2xl font-semibold text-gray-800">Riwayat Diagnosa Pengguna</h1>
+    <a href="data_user.html" class="text-blue-600 hover:text-blue-800 text-sm md:text-base">← Kembali ke Dashboard</a>
+  </header>
+
+  <!-- Konten -->
+  <main class="max-w-4xl mx-auto p-6 md:p-8">
+    <div id="riwayatContainer" class="space-y-6"></div>
+  </main>
+
+  <!-- Script -->
+  <script>
+    document.addEventListener("DOMContentLoaded", async () => {
+      const params = new URLSearchParams(window.location.search);
+      const email = params.get("email");
+      const container = document.getElementById("riwayatContainer");
+
+      if (!email) {
+        container.innerHTML = "<p class='text-red-500'>Email tidak ditemukan di URL.</p>";
+        return;
+      }
+
+      try {
+        const response = await fetch(`php/riwayat_diagnosa.php?email=${encodeURIComponent(email)}`);
+        const data = await response.json();
+
+        if (!Array.isArray(data) || data.length === 0) {
+          container.innerHTML = "<p class='text-gray-600'>Tidak ada riwayat diagnosa yang tersedia.</p>";
+          return;
+        }
+
+        data.forEach(item => {
+          container.innerHTML += `
+            <div class="bg-white rounded-xl shadow-md border border-gray-200 p-6 hover:shadow-lg transition-shadow duration-300">
+              <div class="mb-2 text-sm text-gray-500">📅 ${item.tanggal}</div>
+              <h2 class="text-lg font-semibold text-gray-800 mb-1">${item.kondisi}</h2>
+              <p class="text-gray-700"><strong>Saran:</strong> ${item.saran}</p>
+              <p class="text-gray-700"><strong>Rekomendasi:</strong> ${item.rekomendasi}</p>
+              <div class="bg-gray-50 p-4 mt-3 rounded-lg text-sm text-gray-600 border border-dashed border-gray-300">
+                ${item.deskripsi}
+              </div>
+            </div>
+          `;
+        });
+      } catch (error) {
+        container.innerHTML = `<p class='text-red-500'>Terjadi kesalahan saat memuat data: ${error.message}</p>`;
+        console.error("Fetch error:", error);
+      }
+    });
+  </script>
+
+</body>
+
+</html>

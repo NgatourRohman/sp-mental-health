@@ -1,0 +1,266 @@
+<script>
+    const role = localStorage.getItem("role");
+    if (!role) {
+        alert("Silakan login terlebih dahulu");
+        window.location.href = "index.html";
+    }
+</script>
+
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Diagnosa - Sistem Pakar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="js/config.js"></script>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen">
+    <!-- Sidebar (inject) -->
+    <div id="sidebar"></div>
+
+    <!-- Main -->
+    <main class="p-10 ml-64">
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold">Diagnosa</h1>
+            <div class="text-right">
+                <p class="font-semibold text-gray-700 nama-siswa">Nama User</p>
+            </div>
+        </header>
+
+        <section class="bg-white rounded-xl shadow-md p-6 max-w-3xl mx-auto">
+            <h2 class="text-xl font-semibold mb-6 text-center" id="formTitle">Pertanyaan</h2>
+            <form id="formDiagnosa" class="space-y-5">
+                <p id="loadingMsg" class="text-gray-500 text-center">Memuat pertanyaan...</p>
+            </form>
+            <div class="text-right pt-4">
+                <button id="nextBtn" type="button"
+                    class="px-6 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600">
+                    Next
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Overlay Loading -->
+    <div id="loadingOverlay"
+        class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-xl p-6 shadow-lg flex items-center gap-3">
+            <!-- Spinner -->
+            <svg class="animate-spin h-6 w-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+            </svg>
+            <span class="font-medium">Memproses model... mohon tunggu</span>
+        </div>
+    </div>
+
+    <script>
+        // -------- Sidebar injection & global UI --------
+        (async function injectSidebar() {
+            try {
+                const resp = await fetch('user_sidebar.html', {
+                    cache: 'no-store'
+                });
+                const html = await resp.text();
+                document.getElementById('sidebar').innerHTML = html;
+
+                // Set nama user pada semua elemen .nama-siswa
+                const userNama = localStorage.getItem("nama") || "Siswa";
+                document.querySelectorAll(".nama-siswa").forEach(el => el.textContent = userNama);
+
+                // Tandai link aktif
+                const currentPage = window.location.pathname.split("/").pop() || 'diagnosa.html';
+                document.querySelectorAll('#sidebar a[href]').forEach(a => {
+                    if (a.getAttribute('href') === currentPage) {
+                        a.classList.add('bg-teal-200', 'font-medium');
+                    } else {
+                        a.classList.remove('bg-teal-200');
+                    }
+                });
+            } catch (e) {
+                console.error('Gagal memuat sidebar:', e);
+            }
+        })();
+
+        // Fungsi logout dipakai dari tombol di sidebar
+        function logout() {
+            localStorage.clear();
+            alert("Anda telah logout.");
+            window.location.href = "index.html";
+        }
+
+        // -------- Loading Overlay Helper --------
+        function showLoading(on) {
+            const overlay = document.getElementById('loadingOverlay');
+            const btn = document.getElementById('nextBtn');
+            if (!overlay) return;
+
+            if (on) {
+                overlay.classList.remove('hidden');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.classList.add('opacity-60', 'cursor-not-allowed');
+                    btn.textContent = 'Memproses...';
+                }
+            } else {
+                overlay.classList.add('hidden');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-60', 'cursor-not-allowed');
+                    btn.textContent = (currentStep === gangguanList.length - 1) ? 'Selesai' : 'Next';
+                }
+            }
+        }
+
+        // -------- Logic Halaman Diagnosa --------
+        let currentStep = 0;
+        let gangguanList = []; // [{ kode, nama, gejala: [...] }]
+        const jawaban = []; // akumulasi: [{kode_gejala, nilai}, ...]
+
+        async function fetchGejala() {
+            const formEl = document.getElementById("formDiagnosa");
+            const loadingEl = document.getElementById("loadingMsg");
+            try {
+                // (Opsional) tampilkan loading saat awal fetch
+                showLoading(true);
+
+                const res = await fetch(CONFIG.API_BASE_URL + "gejala_get.php");
+                if (!res.ok) throw new Error("Gagal mengambil data gejala.");
+                const data = await res.json();
+
+                if (!Array.isArray(data) || data.length === 0) {
+                    formEl.innerHTML = "<p class='text-red-500'>Tidak ada data gejala yang tersedia.</p>";
+                    document.getElementById("nextBtn").style.display = "none";
+                    return;
+                }
+
+                // Grouping berdasarkan kode_gangguan
+                const grouped = {};
+                data.forEach(g => {
+                    if (!grouped[g.kode_gangguan]) grouped[g.kode_gangguan] = [];
+                    grouped[g.kode_gangguan].push(g);
+                });
+
+                // Bentuk list step
+                gangguanList = Object.keys(grouped).map((kode, i) => ({
+                    kode: kode,
+                    nama: `Gejala ${i + 1}`,
+                    gejala: grouped[kode]
+                }));
+
+                // Render step pertama
+                if (loadingEl) loadingEl.remove();
+                renderForm(currentStep);
+            } catch (err) {
+                console.error("Error saat memuat gejala:", err);
+                formEl.innerHTML = "<p class='text-red-500'>Gagal memuat data dari server.</p>";
+                document.getElementById("nextBtn").style.display = "none";
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function renderForm(step) {
+            const formEl = document.getElementById("formDiagnosa");
+            const titleEl = document.getElementById("formTitle");
+            formEl.innerHTML = "";
+
+            const gangguan = gangguanList[step];
+            titleEl.textContent = gangguan.nama;
+
+            gangguan.gejala.forEach(g => {
+                const div = document.createElement("div");
+                div.innerHTML = `
+          <label class="block font-medium mb-1">${g.nama_gejala}</label>
+          <select required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-400"
+                  data-id="${g.kode_gejala}">
+            <option value="">Pilih Jawaban</option>
+            <option value="1">1 - Sangat Jarang</option>
+            <option value="2">2 - Jarang</option>
+            <option value="3">3 - Kadang-kadang</option>
+            <option value="4">4 - Sering</option>
+            <option value="5">5 - Sangat Sering</option>
+          </select>
+        `;
+                formEl.appendChild(div);
+            });
+
+            const nextBtn = document.getElementById("nextBtn");
+            nextBtn.textContent = step === gangguanList.length - 1 ? "Selesai" : "Next";
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            // Set nama user di header (jaga-jaga bila sidebar belum selesai inject)
+            const nama = localStorage.getItem("nama") || "User";
+            document.querySelectorAll(".nama-siswa").forEach(el => el.textContent = nama);
+
+            fetchGejala();
+
+            document.getElementById("nextBtn").addEventListener("click", async () => {
+                const selects = document.querySelectorAll("#formDiagnosa select");
+                // Validasi semua pertanyaan terisi
+                for (const select of selects) {
+                    if (!select.value) {
+                        alert("Semua pertanyaan harus dijawab.");
+                        return;
+                    }
+                }
+                // Kumpulkan jawaban step saat ini
+                for (const select of selects) {
+                    jawaban.push({
+                        kode_gejala: select.getAttribute("data-id"),
+                        nilai: parseInt(select.value, 10)
+                    });
+                }
+
+                currentStep++;
+                if (currentStep < gangguanList.length) {
+                    renderForm(currentStep);
+                    window.scrollTo({
+                        top: 0,
+                        behavior: 'smooth'
+                    });
+                } else {
+                    // Kirim ke server (tampilkan overlay loading)
+                    const email = localStorage.getItem("email") || "";
+                    const formData = new FormData();
+                    formData.append("user_email", email);
+                    formData.append("jawaban", JSON.stringify(jawaban));
+
+                    try {
+                        showLoading(true);
+                        const response = await fetch(CONFIG.API_BASE_URL + "proses_diagnosa.php", {
+                            method: "POST",
+                            body: formData
+                        });
+                        const result = await response.json();
+
+                        if (result.status === "success") {
+                            localStorage.setItem("diagnosa", JSON.stringify(result));
+                            window.location.href = "hasil_diagnosa.html";
+                        } else {
+                            alert("Gagal memproses diagnosa: " + (result.message ||
+                                "Unknown error"));
+                        }
+                    } catch (e) {
+                        alert("Terjadi kesalahan jaringan saat mengirim diagnosa.");
+                        console.error(e);
+                    } finally {
+                        // Jika sukses akan redirect; kalau gagal, spinner ditutup
+                        showLoading(false);
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

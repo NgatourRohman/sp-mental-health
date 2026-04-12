@@ -1,0 +1,277 @@
+<script>
+    const role = localStorage.getItem("role");
+    if (!role) {
+        alert("Silakan login terlebih dahulu");
+        window.location.href = "index.html";
+    }
+</script>
+
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Data Gangguan - Sistem Pakar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+
+        td {
+            vertical-align: middle;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen">
+    <!-- Sidebar diinject dari file terpisah -->
+    <div id="sidebar"></div>
+
+    <!-- Main Content (tersusun agar tidak ketutup sidebar) -->
+    <main class="md:ml-64 p-6 md:p-10 min-h-screen">
+        <header class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold">Data Gangguan</h1>
+            <p class="font-semibold text-gray-700 nama-admin">Nama Admin</p>
+        </header>
+
+        <section class="bg-white rounded-xl shadow-md p-6">
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm text-left text-gray-700">
+                    <thead class="bg-gray-200 text-gray-800 font-semibold">
+                        <tr>
+                            <th class="px-6 py-3">Kode</th>
+                            <th class="px-6 py-3">Nama Gangguan</th>
+                            <th class="px-6 py-3">Deskripsi</th>
+                            <th class="px-6 py-3">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelGangguan">
+                        <tr>
+                            <td colspan="4" class="text-center py-6 text-gray-500">Memuat data...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="mt-6 text-right space-x-3">
+                <button class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
+                    onclick="cetakGangguan()">Cetak</button>
+                <button class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600" id="btnTambah">Tambah
+                    Data</button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal Form Gangguan -->
+    <div id="modalForm" class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-md p-6 w-[400px]">
+            <h2 class="text-xl font-bold mb-4" id="formTitle">Tambah Gangguan</h2>
+            <form id="formGangguan">
+                <input type="hidden" id="gangguanId">
+                <div class="mb-4">
+                    <label class="block font-medium mb-1">Kode Gangguan</label>
+                    <input type="text" id="kode" class="w-full px-3 py-2 border rounded-md" required />
+                </div>
+                <div class="mb-4">
+                    <label class="block font-medium mb-1">Nama Gangguan</label>
+                    <input type="text" id="nama" class="w-full px-3 py-2 border rounded-md" required />
+                </div>
+                <div class="mb-4">
+                    <label class="block font-medium mb-1">Deskripsi</label>
+                    <textarea id="deskripsi" class="w-full px-3 py-2 border rounded-md" rows="3"></textarea>
+                </div>
+                <div class="text-right space-x-2">
+                    <button type="button" onclick="closeModal()"
+                        class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">Batal</button>
+                    <button type="submit"
+                        class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        /* ===== Inject Sidebar (fixed & reusable) ===== */
+        (async function injectSidebar() {
+            try {
+                const resp = await fetch('admin_sidebar.html');
+                const html = await resp.text();
+                document.getElementById('sidebar').innerHTML = html;
+
+                // Set nama admin di sidebar setelah inject
+                const adminName = localStorage.getItem("nama") || "Admin";
+                document.querySelectorAll(".nama-admin").forEach(el => el.textContent = adminName);
+
+                // Tandai link aktif
+                const path = (location.pathname || "").split("/").pop() || "data_gangguan.html";
+                document.querySelectorAll('#sidebar a[href]').forEach(a => {
+                    const href = a.getAttribute('href');
+                    if (href && path === href) a.classList.add('bg-teal-200');
+                });
+            } catch (e) {
+                console.error('Gagal memuat sidebar:', e);
+            }
+        })();
+
+        /* ===== Data & UI ===== */
+        let gangguanList = [];
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            const nama = localStorage.getItem("nama") || "Admin";
+            document.querySelectorAll(".nama-admin").forEach(el => el.textContent = nama);
+            await loadData();
+        });
+
+        async function loadData() {
+            try {
+                const res = await fetch("php/gangguan_get.php");
+                gangguanList = await res.json();
+            } catch (e) {
+                gangguanList = [];
+                console.error(e);
+            }
+
+            const tbody = document.getElementById("tabelGangguan");
+            tbody.innerHTML = "";
+
+            if (!Array.isArray(gangguanList) || gangguanList.length === 0) {
+                tbody.innerHTML =
+                    `<tr><td colspan='4' class='text-center py-4 text-gray-500'>Belum ada data gangguan</td></tr>`;
+                return;
+            }
+
+            gangguanList.forEach(g => {
+                const row = document.createElement("tr");
+                row.classList.add("border-b");
+                row.innerHTML = `
+          <td class="px-6 py-4">${g.kode}</td>
+          <td class="px-6 py-4">${g.nama}</td>
+          <td class="px-6 py-4">${g.deskripsi}</td>
+          <td class="px-6 py-4">
+            <div class="flex gap-2">
+              <button onclick="editGangguan(${g.id})" class="px-3 py-1 bg-yellow-400 text-white rounded hover:bg-yellow-500">Ubah</button>
+              <button onclick="hapusGangguan(${g.id})" class="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600">Hapus</button>
+            </div>
+          </td>
+        `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function logout() {
+            localStorage.clear();
+            alert("Anda telah logout.");
+            window.location.href = "index.html";
+        }
+
+        const modal = document.getElementById("modalForm");
+        const form = document.getElementById("formGangguan");
+        const kode = document.getElementById("kode");
+        const nama = document.getElementById("nama");
+        const deskripsi = document.getElementById("deskripsi");
+        const idInput = document.getElementById("gangguanId");
+        const formTitle = document.getElementById("formTitle");
+
+        document.getElementById("btnTambah").addEventListener("click", () => {
+            form.reset();
+            idInput.value = "";
+            formTitle.textContent = "Tambah Gangguan";
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+        });
+
+        function closeModal() {
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+        }
+
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            if (!kode.value.trim() || !nama.value.trim()) {
+                return alert("Kode dan Nama Gangguan wajib diisi.");
+            }
+
+            const formData = new FormData();
+            formData.append("kode", kode.value.trim());
+            formData.append("nama", nama.value.trim());
+            formData.append("deskripsi", deskripsi.value.trim());
+
+            const id = idInput.value;
+            let url = "php/gangguan_add.php";
+            if (id) {
+                formData.append("id", id);
+                url = "php/gangguan_edit.php";
+            }
+
+            try {
+                const res = await fetch(url, {
+                    method: "POST",
+                    body: formData
+                });
+                const result = await res.json();
+                alert(result.message);
+                if (result.status === "success") {
+                    closeModal();
+                    loadData();
+                }
+            } catch (err) {
+                alert("Terjadi kesalahan saat menyimpan data.");
+                console.error(err);
+            }
+        });
+
+        function editGangguan(id) {
+            const gangguan = gangguanList.find(item => String(item.id) === String(id));
+            if (!gangguan) return alert("Data tidak ditemukan");
+
+            idInput.value = gangguan.id;
+            kode.value = gangguan.kode;
+            nama.value = gangguan.nama;
+            deskripsi.value = gangguan.deskripsi || "";
+            formTitle.textContent = "Ubah Gangguan";
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+        }
+
+        async function hapusGangguan(id) {
+            if (!confirm("Yakin ingin menghapus data ini?")) return;
+
+            const form = new FormData();
+            form.append("id", id);
+
+            try {
+                const res = await fetch("php/gangguan_delete.php", {
+                    method: "POST",
+                    body: form
+                });
+                const result = await res.json();
+                alert(result.message);
+                if (result.status === "success") loadData();
+            } catch (err) {
+                alert("Terjadi kesalahan saat menghapus data.");
+                console.error(err);
+            }
+        }
+
+        /* ===== CETAK: buka file laporan terpisah ===== */
+        function cetakGangguan() {
+            if (!Array.isArray(gangguanList) || gangguanList.length === 0) {
+                alert("Belum ada data untuk dicetak.");
+                return;
+            }
+            // Simpan data untuk dibaca oleh halaman laporan
+            localStorage.setItem("laporanGangguan", JSON.stringify(gangguanList));
+
+            // Buka halaman laporan
+            const w = window.open("laporan_gangguan.html", "_blank");
+            if (!w) alert("Pop-up diblokir. Mohon izinkan pop-up untuk situs ini.");
+        }
+        /* ===== END CETAK ===== */
+    </script>
+</body>
+
+</html>

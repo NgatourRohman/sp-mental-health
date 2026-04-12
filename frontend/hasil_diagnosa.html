@@ -1,0 +1,195 @@
+<script>
+    const role = localStorage.getItem("role");
+    if (!role) {
+        alert("Silakan login terlebih dahulu");
+        window.location.href = "index.html";
+    }
+</script>
+
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hasil Diagnosa - Sistem Pakar</title>
+    <script src="js/config.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen">
+    <!-- Sidebar (inject) -->
+    <div id="sidebar"></div>
+
+    <!-- Main Content -->
+    <main class="p-10 ml-64">
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold">Hasil Diagnosa</h1>
+            <div class="text-right">
+                <p class="font-semibold text-gray-700 nama-siswa">Nama User</p>
+            </div>
+        </header>
+
+        <section class="bg-white rounded-xl shadow-md p-8 max-w-4xl mx-auto">
+            <div class="border border-gray-300 rounded-xl p-6 bg-gray-50">
+                <!-- KONDISI -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div class="font-semibold text-gray-700">Kondisi</div>
+                    <div class="col-span-2">: <span id="hasil-kondisi" class="text-gray-800 font-medium"></span></div>
+                </div>
+
+                <!-- SARAN -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div class="font-semibold text-gray-700">Saran</div>
+                    <div class="col-span-2">
+                        <ul id="hasil-saran" class="list-disc pl-6 text-gray-800 text-sm leading-relaxed"></ul>
+                    </div>
+                </div>
+
+                <!-- REKOMENDASI -->
+                <div id="blok-rekomendasi" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 hidden">
+                    <div class="font-semibold text-gray-700">Rekomendasi</div>
+                    <div class="col-span-2">: <span id="hasil-rekomendasi" class="text-gray-800"></span></div>
+                </div>
+
+                <!-- DESKRIPSI -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
+                    <div class="font-semibold text-gray-700">Deskripsi</div>
+                    <div class="col-span-2">:
+                        <div id="hasil-deskripsi"
+                            class="mt-1 p-4 bg-white border border-gray-300 rounded-lg text-sm leading-relaxed text-gray-700">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tombol Cetak -->
+            <div class="mt-6 text-right">
+                <button onclick="cetakHasil()" class="bg-teal-500 text-white px-4 py-2 rounded-lg hover:bg-teal-600">
+                    Cetak Hasil
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // -------- Sidebar injection & active link --------
+        (async function injectSidebar() {
+            try {
+                const resp = await fetch('user_sidebar.html', {
+                    cache: 'no-store'
+                });
+                const html = await resp.text();
+                document.getElementById('sidebar').innerHTML = html;
+
+                // Set nama user pada semua elemen .nama-siswa
+                const userNama = localStorage.getItem("nama") || "Siswa";
+                document.querySelectorAll(".nama-siswa").forEach(el => el.textContent = userNama);
+
+                // Tandai link aktif
+                const currentPage = window.location.pathname.split("/").pop() || 'hasil_diagnosa.html';
+                document.querySelectorAll('#sidebar a[href]').forEach(a => {
+                    if (a.getAttribute('href') === currentPage) {
+                        a.classList.add('bg-teal-200', 'font-medium');
+                    } else {
+                        a.classList.remove('bg-teal-200');
+                    }
+                });
+            } catch (e) {
+                console.error('Gagal memuat sidebar:', e);
+            }
+        })();
+
+        // Dipanggil dari tombol di sidebar
+        function logout() {
+            localStorage.clear();
+            alert("Anda telah logout.");
+            window.location.href = "index.html";
+        }
+
+        // -------- Halaman: ambil & tampilkan hasil diagnosa --------
+        document.addEventListener("DOMContentLoaded", async () => {
+            // Set nama di header (jaga-jaga kalau sidebar belum selesai inject)
+            const nama = localStorage.getItem("nama") || "Siswa";
+            document.querySelectorAll(".nama-siswa").forEach(el => el.textContent = nama);
+
+            const email = localStorage.getItem("email");
+            if (!email) {
+                alert("Email tidak ditemukan di sesi.");
+                return;
+            }
+
+            try {
+                const res = await fetch(CONFIG.API_BASE_URL + `hasil_diagnosa_get.php?email=${encodeURIComponent(email)}`);
+                const data = await res.json();
+
+                if (data.error) {
+                    alert("Error: " + data.error);
+                    return;
+                }
+                if (!data.kondisi) {
+                    alert("Data hasil diagnosa tidak ditemukan.");
+                    return;
+                }
+
+                // Isi tampilan
+                document.getElementById("hasil-kondisi").textContent = data.kondisi;
+
+                const saranList = document.getElementById("hasil-saran");
+                const saranArray = Array.isArray(data.saran) ?
+                    data.saran :
+                    String(data.saran || "-").split('\n');
+
+                saranList.innerHTML = "";
+                saranArray.forEach(item => {
+                    if (!item) return;
+                    const li = document.createElement("li");
+                    li.textContent = item;
+                    saranList.appendChild(li);
+                });
+
+                if (data.rekomendasi && data.rekomendasi !== "-") {
+                    document.getElementById("blok-rekomendasi").classList.remove("hidden");
+                    document.getElementById("hasil-rekomendasi").textContent = data.rekomendasi;
+                }
+
+                document.getElementById("hasil-deskripsi").textContent = data.deskripsi || "-";
+
+                // Simpan data siap-cetak (profil ringkas)
+                let jenisKelamin = "-";
+                try {
+                    const profilRes = await fetch(
+                        CONFIG.API_BASE_URL + `data_diri_get.php?email=${encodeURIComponent(email)}`);
+                    const profilJson = await profilRes.json();
+                    jenisKelamin = (profilJson && profilJson.data && (profilJson.data.jenis_kelamin ||
+                        profilJson.data.gender)) || "-";
+                } catch (_) {}
+
+                const laporanObj = {
+                    nama: nama,
+                    jenis_kelamin: jenisKelamin,
+                    kondisi: data.kondisi || "-",
+                    saran: saranArray.filter(Boolean),
+                    rekomendasi: data.rekomendasi || "",
+                    deskripsi: data.deskripsi || ""
+                };
+                localStorage.setItem("laporanDiagnosaSiswa", JSON.stringify(laporanObj));
+            } catch (error) {
+                console.error("Gagal mengambil hasil diagnosa:", error);
+                alert("Gagal mengambil hasil diagnosa.");
+            }
+        });
+
+        function cetakHasil() {
+            const w = window.open("laporan_hasil_diagnosa.html", "_blank");
+            if (!w) alert("Pop-up diblokir. Mohon izinkan pop-up untuk situs ini.");
+        }
+    </script>
+</body>
+
+</html>

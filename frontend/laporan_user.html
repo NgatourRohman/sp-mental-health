@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Cetak Data User (Siswa)</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 15mm;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12px;
+            color: #000;
+        }
+
+        .container {
+            padding: 15mm;
+            padding-bottom: 0;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header img {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+        }
+
+        .title {
+            flex: 1;
+            text-align: center;
+        }
+
+        .title h3 {
+            margin: 0;
+            font-size: 18px;
+        }
+
+        .alamat {
+            font-size: 11px;
+            margin-top: 2px;
+            line-height: 1.3;
+        }
+
+        hr {
+            margin: 8px 0 0 0;
+            border: 0;
+            border-top: 1px solid #000;
+        }
+
+        h2 {
+            text-align: center;
+            margin: 16px 0 8px;
+            font-size: 16px;
+        }
+
+        .meta {
+            text-align: center;
+            font-size: 11px;
+            margin-bottom: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        th,
+        td {
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        th {
+            text-align: center;
+        }
+
+        colgroup col:nth-child(1) {
+            width: 8%;
+        }
+
+        /* No */
+        colgroup col:nth-child(2) {
+            width: 15%;
+        }
+
+        /* ID */
+        colgroup col:nth-child(3) {
+            width: 27%;
+        }
+
+        /* Nama */
+        colgroup col:nth-child(4) {
+            width: 30%;
+        }
+
+        /* Email */
+        colgroup col:nth-child(5) {
+            width: auto;
+        }
+
+        /* Peran */
+
+        .wrap {
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .page-block {
+            page-break-inside: avoid;
+            margin-bottom: 10px;
+        }
+
+        .page-break {
+            page-break-before: always;
+        }
+
+        .page-info {
+            font-size: 11px;
+            text-align: right;
+            margin: 6px 0;
+            font-style: italic;
+        }
+
+        .signature {
+            margin-top: 24px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .ttd {
+            width: 240px;
+            text-align: center;
+        }
+
+        .ttd .space {
+            height: 50px;
+        }
+
+        @media print {
+
+            th,
+            td {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <img src="logo.png" alt="Logo">
+            <div class="title">
+                <h3>PASKIBRA SMP NEGERI 35</h3>
+                <p class="alamat">
+                    Jl. K.H. Raiman No.3, RT.6/RW.3, Balekambang, Kec. Kramat Jati, Kota Jakarta Timur,<br>
+                    Daerah Khusus Ibukota Jakarta 13530
+                </p>
+            </div>
+        </div>
+        <hr>
+
+        <h2>DATA USER (SISWA)</h2>
+        <div class="meta" id="metaInfo">Memuat...</div>
+
+        <div id="tablesContainer"></div>
+
+        <div class="signature">
+            <div class="ttd">
+                <div id="tanggalCetak">Jakarta, -</div>
+                <div>Pelatih Paskibra</div>
+                <div class="space"></div>
+                <div><strong>Maura Putri Prambudya</strong></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            'use strict';
+
+            function escapeHtml(str) {
+                str = (str == null ? "" : String(str));
+                return str
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
+
+            // Ambil data siap-cetak dari halaman utama
+            var raw = localStorage.getItem("laporanUser");
+            var data;
+            try {
+                data = JSON.parse(raw || "[]");
+            } catch (e) {
+                data = [];
+            }
+
+            var admin = localStorage.getItem("nama") || "Admin";
+            var lokasi = localStorage.getItem("lokasiTTD") || "Jakarta";
+            var tanggalCetak = new Date().toLocaleDateString("id-ID", {
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric"
+            });
+
+            document.getElementById("metaInfo").textContent =
+                "Dicetak oleh: " + admin + " · Tanggal: " + tanggalCetak;
+
+            document.getElementById("tanggalCetak").textContent =
+                escapeHtml(lokasi) + ", " + escapeHtml(tanggalCetak);
+
+            var MAX_ROWS = 10; // baris per halaman
+            var totalRows = Array.isArray(data) ? data.length : 0;
+            var totalPages = Math.max(1, Math.ceil(totalRows / MAX_ROWS));
+            var container = document.getElementById("tablesContainer");
+
+            function colgroupHTML() {
+                return '<colgroup><col><col><col><col><col></colgroup>';
+            }
+
+            function theadHTML() {
+                return (
+                    "<thead><tr>" +
+                    "<th>No</th>" +
+                    "<th>ID</th>" +
+                    "<th>Nama</th>" +
+                    "<th>Email</th>" +
+                    "<th>Peran</th>" +
+                    "</tr></thead>"
+                );
+            }
+
+            if (totalRows === 0) {
+                var block = document.createElement("div");
+                block.className = "page-block";
+                block.innerHTML =
+                    '<div class="page-info">Halaman 1 dari 1</div>' +
+                    '<table>' + colgroupHTML() + theadHTML() +
+                    '<tbody><tr><td colspan="5" style="text-align:center;">Tidak ada data</td></tr></tbody></table>';
+                container.appendChild(block);
+            } else {
+                for (var page = 0; page < totalPages; page++) {
+                    var start = page * MAX_ROWS;
+                    var end = Math.min(start + MAX_ROWS, totalRows);
+                    var pageData = data.slice(start, end);
+
+                    var blockDiv = document.createElement("div");
+                    blockDiv.className = "page-block" + (page > 0 ? " page-break" : "");
+
+                    var infoDiv = document.createElement("div");
+                    infoDiv.className = "page-info";
+                    infoDiv.textContent = "Halaman " + (page + 1) + " dari " + totalPages;
+                    blockDiv.appendChild(infoDiv);
+
+                    var html = '<table>' + colgroupHTML() + theadHTML() + '<tbody>';
+                    for (var i = 0; i < pageData.length; i++) {
+                        var u = pageData[i] || {};
+                        html += '<tr>' +
+                            '<td>' + escapeHtml(start + i + 1) + '</td>' +
+                            '<td>' + escapeHtml(u.id_tampil) + '</td>' +
+                            '<td class="wrap">' + escapeHtml(u.nama) + '</td>' +
+                            '<td class="wrap">' + escapeHtml(u.email) + '</td>' +
+                            '<td>' + escapeHtml(u.peran) + '</td>' +
+                            '</tr>';
+                    }
+                    html += '</tbody></table>';
+
+                    blockDiv.insertAdjacentHTML('beforeend', html);
+                    container.appendChild(blockDiv);
+                }
+            }
+
+            window.print();
+            window.onafterprint = function () {
+                window.close();
+            };
+
+            // (opsional) bersihkan storage:
+            // localStorage.removeItem("laporanUser");
+        })();
+    </script>
+</body>
+
+</html>
