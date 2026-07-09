@@ -118,6 +118,13 @@ CREATE POLICY "anon_all_users" ON users FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "anon_all_user_profile" ON user_profile FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "anon_all_relasi" ON relasi FOR ALL USING (true) WITH CHECK (true);
 
+-- Izinkan anon role memakai schema, tabel, dan sequence public.
+-- Ini diperlukan karena aplikasi frontend-only memanggil Supabase REST API
+-- langsung dari browser memakai anon public key.
+GRANT USAGE ON SCHEMA public TO anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO anon;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon;
+
 -- Akun demo frontend-only. Password disimpan sebagai SHA-256 hex.
 -- arthur@example.com / arthur123
 -- siswa@example.com / siswa123
