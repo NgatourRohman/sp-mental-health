@@ -1,17 +1,11 @@
 <?php
-header("Content-Type: application/json");
-include 'koneksi.php';
+require_once 'bootstrap.php';
 
-try {
-    $result = $conn->query("SELECT * FROM gangguan ORDER BY kode");
+$supabase = get_supabase();
+$result = $supabase->fetch("gangguan", "select=*&order=kode.asc");
 
-    $data = [];
-    while ($row = $result->fetch_assoc()) {
-        $data[] = $row;
-    }
-
-    echo json_encode($data);
-} catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+if ($result['status'] !== 'success') {
+    json_response(["status" => "error", "message" => supabase_error($result)], 500);
 }
+
+echo json_encode($result['data'] ?? []);

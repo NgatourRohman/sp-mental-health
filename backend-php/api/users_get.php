@@ -1,12 +1,11 @@
 <?php
-include 'koneksi.php';
+require_once 'bootstrap.php';
 
-$sql = "SELECT * FROM users ORDER BY id ASC";
-$result = $conn->query($sql);
+$supabase = get_supabase();
+$result = $supabase->fetch("users", "select=id,nama,email,role,created_at&order=created_at.asc");
 
-$data = [];
-while ($row = $result->fetch_assoc()) {
-    $data[] = $row;
+if ($result['status'] !== 'success') {
+    json_response(["status" => "error", "message" => supabase_error($result)], 500);
 }
 
-echo json_encode($data);
+echo json_encode($result['data'] ?? []);

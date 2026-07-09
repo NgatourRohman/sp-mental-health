@@ -1,21 +1,25 @@
 <?php
-include 'koneksi.php';
+require_once 'bootstrap.php';
 
-$kode = $_POST['kode'] ?? '';
-$nama = $_POST['nama'] ?? '';
-$deskripsi = $_POST['deskripsi'] ?? '';
+require_post();
+$supabase = get_supabase();
+
+$kode = post_value('kode');
+$nama = post_value('nama');
+$deskripsi = post_value('deskripsi');
 
 if (!$kode || !$nama) {
-    echo json_encode(["status" => "error", "message" => "Data tidak lengkap"]);
-    exit;
+    json_response(["status" => "error", "message" => "Data tidak lengkap"], 400);
 }
 
-try {
-    $stmt = $conn->prepare("INSERT INTO gangguan (kode, nama, deskripsi) VALUES (?, ?, ?)");
-    $stmt->bind_param("sss", $kode, $nama, $deskripsi);
-    $stmt->execute();
+$result = $supabase->insert("gangguan", [
+    "kode" => $kode,
+    "nama" => $nama,
+    "deskripsi" => $deskripsi
+]);
 
-    echo json_encode(["status" => "success", "message" => "Data gangguan berhasil ditambahkan"]);
-} catch (Exception $e) {
-    echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+if ($result['status'] !== 'success') {
+    json_response(["status" => "error", "message" => supabase_error($result, "Gagal menambahkan gangguan.")], 500);
 }
+
+echo json_encode(["status" => "success", "message" => "Data gangguan berhasil ditambahkan"]);

@@ -1,38 +1,40 @@
 <?php
-header('Content-Type: application/json');
-include 'koneksi.php';
+require_once 'bootstrap.php';
 
-$email = $_POST['user_email'] ?? '';
-$nama = $_POST['nama'] ?? '';
-$tgl_lahir = $_POST['tgl_lahir'] ?? '';
-$jenis_kelamin = $_POST['jenis_kelamin'] ?? '';
-$alamat = $_POST['alamat'] ?? '';
-$no_telp = $_POST['no_telp'] ?? '';
+require_post();
+$supabase = get_supabase();
 
-// Validasi
+$email = filter_var(post_value('user_email'), FILTER_SANITIZE_EMAIL);
+$nama = post_value('nama');
+$tgl_lahir = post_value('tgl_lahir');
+$jenis_kelamin = post_value('jenis_kelamin');
+$alamat = post_value('alamat');
+$no_telp = post_value('no_telp');
+
 if (!$email || !$nama || !$tgl_lahir || !$jenis_kelamin || !$alamat || !$no_telp) {
-    echo json_encode(['status' => 'error', 'message' => 'Semua field wajib diisi']);
-    exit;
+    json_response(['status' => 'error', 'message' => 'Semua field wajib diisi'], 400);
 }
 
-// Cek apakah data user sudah ada
-$stmt = $conn->prepare("SELECT * FROM user_profile WHERE email = ?");
-$stmt->bind_param("s", $email);
-$stmt->execute();
-$result = $stmt->get_result();
+$payload = [
+    "email" => $email,
+    "nama" => $nama,
+    "tgl_lahir" => $tgl_lahir,
+    "jenis_kelamin" => $jenis_kelamin,
+    "alamat" => $alamat,
+    "no_telp" => $no_telp
+];
 
-if ($result->num_rows > 0) {
-    // Update
-    $stmt = $conn->prepare("UPDATE user_profile SET nama=?, tgl_lahir=?, jenis_kelamin=?, alamat=?, no_telp=? WHERE email=?");
-    $stmt->bind_param("ssssss", $nama, $tgl_lahir, $jenis_kelamin, $alamat, $no_telp, $email);
-} else {
-    // Insert
-    $stmt = $conn->prepare("INSERT INTO user_profile (email, nama, tgl_lahir, jenis_kelamin, alamat, no_telp) VALUES (?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("ssssss", $email, $nama, $tgl_lahir, $jenis_kelamin, $alamat, $no_telp);
+$existing = $supabase->fetch("user_profile", "email=eq." . urlencode($email) . "&limit=1");
+if ($existing['status'] !== 'success') {
+    json_response(['status' => 'error', 'message' => supabase_error($existing)], 500);
 }
 
-if ($stmt->execute()) {
+$result = !empty($existing['data'])
+    ? $supabase->update("user_profile", $payload, "email=eq." . urlencode($email))
+    : $supabase->insert("user_profile", $payload);
+
+if ($result['status'] === 'success') {
     echo json_encode(['status' => 'success']);
 } else {
-    echo json_encode(['status' => 'error', 'message' => $stmt->error]);
+    json_response(['status' => 'error', 'message' => supabase_error($result)], 500);
 }

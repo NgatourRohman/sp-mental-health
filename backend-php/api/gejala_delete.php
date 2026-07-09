@@ -1,19 +1,19 @@
 <?php
-header("Content-Type: application/json");
-include 'koneksi.php';
+require_once 'bootstrap.php';
 
-$id = $_POST['id'] ?? null;
+require_post();
+$supabase = get_supabase();
+
+$id = post_value('id');
 
 if (!$id) {
-    echo json_encode(["status" => "error", "message" => "ID gejala tidak ditemukan."]);
-    exit;
+    json_response(["status" => "error", "message" => "ID gejala tidak ditemukan."], 400);
 }
 
-$stmt = $conn->prepare("DELETE FROM gejala WHERE id = ?");
-$stmt->bind_param("i", $id);
+$result = $supabase->delete("gejala", "id=eq." . urlencode($id));
 
-if ($stmt->execute()) {
-    echo json_encode(["status" => "success", "message" => "Data gejala berhasil dihapus."]);
-} else {
-    echo json_encode(["status" => "error", "message" => "Gagal menghapus data gejala."]);
+if ($result['status'] !== 'success') {
+    json_response(["status" => "error", "message" => supabase_error($result, "Gagal menghapus data gejala.")], 500);
 }
+
+echo json_encode(["status" => "success", "message" => "Data gejala berhasil dihapus."]);

@@ -1,22 +1,18 @@
 <?php
-header('Content-Type: application/json');
-include 'koneksi.php';
+require_once 'bootstrap.php';
 
-$email = $_GET['email'] ?? '';
+$supabase = get_supabase();
+$email = filter_var(get_value('email'), FILTER_SANITIZE_EMAIL);
 
 if (!$email) {
-    echo json_encode(['status' => 'error', 'message' => 'Email tidak diberikan']);
-    exit;
+    json_response(['status' => 'error', 'message' => 'Email tidak diberikan'], 400);
 }
 
-$stmt = $conn->prepare("SELECT * FROM user_profile WHERE email = ?");
-$stmt->bind_param("s", $email);
-$stmt->execute();
-$result = $stmt->get_result();
+$result = $supabase->fetch("user_profile", "email=eq." . urlencode($email) . "&limit=1");
 
-if ($result->num_rows > 0) {
-    $data = $result->fetch_assoc();
-    echo json_encode(['status' => 'success', 'data' => $data]);
-} else {
-    echo json_encode(['status' => 'not_found']);
+if ($result['status'] !== 'success') {
+    json_response(['status' => 'error', 'message' => supabase_error($result)], 500);
 }
+
+$data = $result['data'][0] ?? null;
+echo json_encode($data ? ['status' => 'success', 'data' => $data] : ['status' => 'not_found']);

@@ -1,10 +1,7 @@
 <?php
-header("Content-Type: application/json");
-require_once '../core/SupabaseHelper.php';
+require_once 'bootstrap.php';
 
-$supabaseUrl  = getenv("SUPABASE_URL");
-$supabaseKey  = getenv("SUPABASE_KEY");
-$supabase = new SupabaseHelper($supabaseUrl, $supabaseKey);
+$supabase = get_supabase();
 
 $diagnosaRes = $supabase->fetch("hasil_diagnosa", "select=hasil_diagnosa,confidence");
 if ($diagnosaRes['status'] !== 'success') {

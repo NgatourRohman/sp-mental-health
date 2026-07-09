@@ -31,8 +31,29 @@ Pastikan variabel berikut dikonfigurasi pada dashboard **Render**:
 - `PYTHON_API_URL`: URL deployment ML Service (tambahkan `/predict`).
 - `API_KEY_PASKIBRA`: Token rahasia untuk otentikasi antar-layanan.
 
+Contoh konfigurasi tersedia di `.env.example`.
+
+## ▶️ Menjalankan Lokal
+1. Jalankan skema `supabase-schema/initial_setup.sql` di Supabase SQL Editor.
+2. Set environment variable backend PHP sesuai `.env.example`.
+3. Jalankan backend PHP dari root project:
+   ```bash
+   php -S localhost:8000 -t backend-php
+   ```
+4. Jalankan ML service:
+   ```bash
+   cd ml-python
+   uvicorn main:app --reload --host 127.0.0.1 --port 8001
+   ```
+5. Atur `PYTHON_API_URL` ke `http://127.0.0.1:8001/predict`.
+6. Buka halaman di folder `frontend/`.
+
+## 🔧 Status Integrasi
+- Frontend memakai `frontend/js/config.js` sebagai satu sumber base URL API.
+- Endpoint PHP utama memakai Supabase REST API melalui `backend-php/core/SupabaseHelper.php`.
+- File `backend-php/api/koneksi.php` dipertahankan sebagai stub deprecated dan akan memberi error jika endpoint lama masih memanggil MySQL.
+
 ## 📝 Lisensi
 Proyek ini dibuat untuk tujuan akademik dan pengembangan kesehatan mental.
 
 ---
-*Developed with ❤️ for a better mental health support.*

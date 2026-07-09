@@ -1,30 +1,32 @@
 <?php
-header('Content-Type: application/json');
-include 'koneksi.php';
+require_once 'bootstrap.php';
 
-$email = $_GET['email'] ?? '';
+$supabase = get_supabase();
+$email = filter_var(get_value('email'), FILTER_SANITIZE_EMAIL);
 
 if (!$email) {
     echo json_encode([]);
     exit;
 }
 
-// Ambil data dari database
-$query = "SELECT hasil_diagnosa AS kondisi, deskripsi, saran, rekomendasi, 
-                 DATE_FORMAT(waktu_diagnosa, '%d-%m-%Y %H:%i') AS tanggal 
-          FROM hasil_diagnosa 
-          WHERE email = ? 
-          ORDER BY waktu_diagnosa DESC";
+$result = $supabase->fetch(
+    "hasil_diagnosa",
+    "email=eq." . urlencode($email) . "&select=hasil_diagnosa,deskripsi,saran,rekomendasi,waktu_diagnosa&order=waktu_diagnosa.desc"
+);
 
-$stmt = $conn->prepare($query);
-$stmt->bind_param("s", $email);
-$stmt->execute();
+if ($result['status'] !== 'success') {
+    json_response(["status" => "error", "message" => supabase_error($result)], 500);
+}
 
-$result = $stmt->get_result();
 $data = [];
-
-while ($row = $result->fetch_assoc()) {
-    $data[] = $row;
+foreach (($result['data'] ?? []) as $row) {
+    $data[] = [
+        "kondisi" => $row['hasil_diagnosa'] ?? "-",
+        "deskripsi" => $row['deskripsi'] ?? "-",
+        "saran" => $row['saran'] ?? "-",
+        "rekomendasi" => $row['rekomendasi'] ?? "-",
+        "tanggal" => isset($row['waktu_diagnosa']) ? date('d-m-Y H:i', strtotime($row['waktu_diagnosa'])) : "-"
+    ];
 }
 
 echo json_encode($data);

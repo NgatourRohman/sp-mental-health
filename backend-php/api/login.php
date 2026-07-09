@@ -1,55 +1,36 @@
 <?php
-header("Content-Type: application/json");
-include 'koneksi.php';
+require_once 'bootstrap.php';
 
-// Ambil email dan password dari POST
-$email = $_POST['email'] ?? '';
-$password = $_POST['password'] ?? '';
+require_post();
 
-// Validasi input
+$supabase = get_supabase();
+$email = filter_var(post_value('email'), FILTER_SANITIZE_EMAIL);
+$password = post_value('password');
+
 if (!$email || !$password) {
-    echo json_encode([
-        "status" => "debug",
-        "message" => "Email dan password tidak diterima",
-        "email_received" => $email,
-        "password_received" => $password
-    ]);
-    exit;
+    json_response(["status" => "error", "message" => "Email dan password wajib diisi."], 400);
 }
 
-// Ambil data user dari database
-$stmt = $conn->prepare("SELECT * FROM users WHERE email = ?");
-$stmt->bind_param("s", $email);
-$stmt->execute();
-$result = $stmt->get_result();
-$user = $result->fetch_assoc();
+$result = $supabase->fetch("users", "email=eq." . urlencode($email) . "&limit=1");
+if ($result['status'] !== 'success') {
+    json_response(["status" => "error", "message" => supabase_error($result)], 500);
+}
+
+$user = $result['data'][0] ?? null;
 
 if (!$user) {
-    echo json_encode([
-        "status" => "debug",
-        "message" => "Email tidak ditemukan di database",
-        "query_email" => $email
-    ]);
-    exit;
+    json_response(["status" => "error", "message" => "Email atau password salah."], 401);
 }
 
-// Verifikasi password
 $isPasswordValid = password_verify($password, $user['password']);
 
 if (!$isPasswordValid) {
-    echo json_encode([
-        "status" => "debug",
-        "message" => "Password tidak cocok",
-        "input_password" => $password,
-        "stored_hash" => $user['password']
-    ]);
-    exit;
+    json_response(["status" => "error", "message" => "Email atau password salah."], 401);
 }
 
-// Berhasil login
 echo json_encode([
     "status" => "success",
     "nama" => $user['nama'],
     "email" => $user['email'],
-    "role" => strtolower($user['role']) // lowercase untuk konsistensi
+    "role" => strtolower($user['role'] ?? 'siswa')
 ]);

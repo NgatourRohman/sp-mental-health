@@ -14,6 +14,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Data Diri - Sistem Pakar</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="js/config.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     <style>
         body {
@@ -132,7 +133,7 @@
 
             // Ambil data existing
             try {
-                const res = await fetch("php/data_diri_get.php?email=" + encodeURIComponent(email));
+                const res = await fetch(CONFIG.API_BASE_URL + "data_diri_get.php?email=" + encodeURIComponent(email));
                 const data = await res.json();
 
                 if (data.status === "success" && data.data) {
@@ -157,7 +158,7 @@
                     e.preventDefault();
                     const formData = new FormData(this);
                     try {
-                        const res = await fetch("php/simpan_data_diri.php", {
+                        const res = await fetch(CONFIG.API_BASE_URL + "simpan_data_diri.php", {
                             method: "POST",
                             body: formData
                         });
@@ -182,7 +183,7 @@
                 btnUbah.addEventListener("click", async function () {
                     const formData = new FormData(document.getElementById("formDataDiri"));
                     try {
-                        const res = await fetch("php/simpan_data_diri.php", {
+                        const res = await fetch(CONFIG.API_BASE_URL + "simpan_data_diri.php", {
                             method: "POST",
                             body: formData
                         });

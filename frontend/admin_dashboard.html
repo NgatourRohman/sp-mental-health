@@ -14,6 +14,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Admin - Sistem Pakar</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="js/config.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     <style>
         body {
@@ -111,7 +112,7 @@
             document.querySelectorAll(".nama-admin").forEach(el => el.textContent = nama);
 
             try {
-                const res = await fetch("php/dashboard_stats.php");
+                const res = await fetch(CONFIG.API_BASE_URL + "dashboard_stats.php");
                 const stats = await res.json();
 
                 document.getElementById("countUser").textContent =

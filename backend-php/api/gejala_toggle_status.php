@@ -1,20 +1,22 @@
 <?php
-header("Content-Type: application/json");
-include 'koneksi.php';
+require_once 'bootstrap.php';
 
-$id = $_POST['id'] ?? null;
+require_post();
+$supabase = get_supabase();
+
+$id = post_value('id');
 $aktif = $_POST['aktif'] ?? null;
 
 if (!$id || !isset($aktif)) {
-    echo json_encode(["status" => "error", "message" => "Data tidak lengkap."]);
-    exit;
+    json_response(["status" => "error", "message" => "Data tidak lengkap."], 400);
 }
 
-$stmt = $conn->prepare("UPDATE gejala SET aktif = ? WHERE id = ?");
-$stmt->bind_param("ii", $aktif, $id);
+$result = $supabase->update("gejala", [
+    "aktif" => ((int) $aktif) === 1
+], "id=eq." . urlencode($id));
 
-if ($stmt->execute()) {
-    echo json_encode(["status" => "success", "message" => "Status gejala berhasil diubah."]);
-} else {
-    echo json_encode(["status" => "error", "message" => "Gagal mengubah status gejala."]);
+if ($result['status'] !== 'success') {
+    json_response(["status" => "error", "message" => supabase_error($result, "Gagal mengubah status gejala.")], 500);
 }
+
+echo json_encode(["status" => "success", "message" => "Status gejala berhasil diubah."]);

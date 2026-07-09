@@ -1,28 +1,31 @@
 <?php
-header("Content-Type: application/json");
-include 'koneksi.php';
+require_once 'bootstrap.php';
 
-// Validasi input
+require_post();
+$supabase = get_supabase();
+
 if (
     !isset($_POST['id']) ||
     !isset($_POST['kode_gejala']) ||
     !isset($_POST['nama_gejala']) ||
     !isset($_POST['kode_gangguan'])
 ) {
-    echo json_encode(["status" => "error", "message" => "Data tidak lengkap."]);
-    exit;
+    json_response(["status" => "error", "message" => "Data tidak lengkap."], 400);
 }
 
-$id = $_POST['id'];
-$kode_gejala = $_POST['kode_gejala'];
-$nama_gejala = $_POST['nama_gejala'];
-$kode_gangguan = $_POST['kode_gangguan'];
+$id = post_value('id');
+$kode_gejala = post_value('kode_gejala');
+$nama_gejala = post_value('nama_gejala');
+$kode_gangguan = post_value('kode_gangguan');
 
-$stmt = $conn->prepare("UPDATE gejala SET kode_gejala = ?, nama_gejala = ?, kode_gangguan = ? WHERE id = ?");
-$stmt->bind_param("sssi", $kode_gejala, $nama_gejala, $kode_gangguan, $id);
+$result = $supabase->update("gejala", [
+    "kode_gejala" => $kode_gejala,
+    "nama_gejala" => $nama_gejala,
+    "kode_gangguan" => $kode_gangguan
+], "id=eq." . urlencode($id));
 
-if ($stmt->execute()) {
-    echo json_encode(["status" => "success", "message" => "Gejala berhasil diubah."]);
-} else {
-    echo json_encode(["status" => "error", "message" => "Gagal mengubah gejala."]);
+if ($result['status'] !== 'success') {
+    json_response(["status" => "error", "message" => supabase_error($result, "Gagal mengubah gejala.")], 500);
 }
+
+echo json_encode(["status" => "success", "message" => "Gejala berhasil diubah."]);

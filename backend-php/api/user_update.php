@@ -1,27 +1,27 @@
 <?php
-include 'koneksi.php';
+require_once 'bootstrap.php';
 
-$id = $_POST['id'] ?? '';
-$nama = $_POST['nama'] ?? '';
-$email = $_POST['email'] ?? '';
-$password = $_POST['password'] ?? '';
+require_post();
+$supabase = get_supabase();
+
+$id = post_value('id');
+$nama = post_value('nama');
+$email = filter_var(post_value('email'), FILTER_SANITIZE_EMAIL);
+$password = post_value('password');
 
 if (!$id || !$nama || !$email) {
-    echo json_encode(["success" => false, "message" => "ID, nama, dan email wajib diisi."]);
-    exit;
+    json_response(["success" => false, "message" => "ID, nama, dan email wajib diisi."], 400);
 }
 
+$payload = ["nama" => $nama, "email" => $email];
 if ($password) {
-    $hashed = password_hash($password, PASSWORD_BCRYPT);
-    $query = $conn->prepare("UPDATE users SET nama=?, email=?, password=? WHERE id=?");
-    $query->bind_param("sssi", $nama, $email, $hashed, $id);
-} else {
-    $query = $conn->prepare("UPDATE users SET nama=?, email=? WHERE id=?");
-    $query->bind_param("ssi", $nama, $email, $id);
+    $payload["password"] = password_hash($password, PASSWORD_BCRYPT);
 }
 
-if ($query->execute()) {
-    echo json_encode(["success" => true, "message" => "User berhasil diperbarui."]);
-} else {
-    echo json_encode(["success" => false, "message" => "Gagal memperbarui user."]);
+$result = $supabase->update("users", $payload, "id=eq." . urlencode($id));
+
+if ($result['status'] !== 'success') {
+    json_response(["success" => false, "message" => supabase_error($result, "Gagal memperbarui user.")], 500);
 }
+
+echo json_encode(["success" => true, "message" => "User berhasil diperbarui."]);

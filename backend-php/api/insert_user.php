@@ -1,25 +1,27 @@
 <?php
-$conn = new mysqli("localhost", "root", "", "sistem-pakar");
+require_once 'bootstrap.php';
 
-if ($conn->connect_error) {
-    die("Koneksi gagal: " . $conn->connect_error);
-}
+$supabase = get_supabase();
 
-// Data user (siswa)
 $nama = "Siswa";
 $email = "siswa@example.com";
-$password = password_hash("siswa123", PASSWORD_DEFAULT); // password = siswa123
+$password = password_hash("siswa123", PASSWORD_DEFAULT);
 $role = "siswa";
 
-// Simpan ke database
-$stmt = $conn->prepare("INSERT INTO users (nama, email, password, role) VALUES (?, ?, ?, ?)");
-$stmt->bind_param("ssss", $nama, $email, $password, $role);
-
-if ($stmt->execute()) {
-    echo "Siswa berhasil ditambahkan.";
-} else {
-    echo "Gagal: " . $stmt->error;
+$existing = $supabase->fetch("users", "email=eq." . urlencode($email) . "&limit=1");
+if ($existing['status'] === 'success' && !empty($existing['data'])) {
+    json_response(["status" => "success", "message" => "Siswa sudah ada."]);
 }
 
-$stmt->close();
-$conn->close();
+$result = $supabase->insert("users", [
+    "nama" => $nama,
+    "email" => $email,
+    "password" => $password,
+    "role" => $role
+]);
+
+if ($result['status'] !== 'success') {
+    json_response(["status" => "error", "message" => supabase_error($result)], 500);
+}
+
+echo json_encode(["status" => "success", "message" => "Siswa berhasil ditambahkan."]);

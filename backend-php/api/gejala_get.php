@@ -1,33 +1,26 @@
 <?php
-header("Content-Type: application/json");
-include 'koneksi.php';
+require_once 'bootstrap.php';
 
-try {
-    $sql = "
-        SELECT 
-            g.id,
-            g.kode_gejala,
-            g.nama_gejala,
-            g.kode_gangguan,
-            gg.nama AS nama_gangguan,
-            g.aktif
-        FROM gejala g
-        LEFT JOIN gangguan gg ON g.kode_gangguan = gg.kode
-        ORDER BY g.kode_gangguan, g.kode_gejala
-    ";
+$supabase = get_supabase();
+$gejalaRes = $supabase->fetch("gejala", "select=*&order=kode_gangguan.asc,kode_gejala.asc");
+$gangguanRes = $supabase->fetch("gangguan", "select=kode,nama");
 
-    $result = $conn->query($sql);
-    $data = [];
-
-    while ($row = $result->fetch_assoc()) {
-        $data[] = $row;
-    }
-
-    echo json_encode($data);
-} catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode([
-        "status" => "error",
-        "message" => "Gagal mengambil data: " . $e->getMessage()
-    ]);
+if ($gejalaRes['status'] !== 'success') {
+    json_response(["status" => "error", "message" => supabase_error($gejalaRes, "Gagal mengambil gejala.")], 500);
 }
+
+$gangguanMap = [];
+if ($gangguanRes['status'] === 'success') {
+    foreach (($gangguanRes['data'] ?? []) as $gangguan) {
+        $gangguanMap[$gangguan['kode']] = $gangguan['nama'];
+    }
+}
+
+$data = [];
+foreach (($gejalaRes['data'] ?? []) as $row) {
+    $row['nama_gangguan'] = $gangguanMap[$row['kode_gangguan'] ?? ''] ?? null;
+    $row['aktif'] = !isset($row['aktif']) || $row['aktif'] ? 1 : 0;
+    $data[] = $row;
+}
+
+echo json_encode($data);

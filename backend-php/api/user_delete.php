@@ -1,17 +1,17 @@
 <?php
-include 'koneksi.php';
+require_once 'bootstrap.php';
 
-$id = $_GET['id'] ?? '';
+$supabase = get_supabase();
+
+$id = get_value('id');
 if (!$id) {
-    echo json_encode(["success" => false, "message" => "ID tidak valid."]);
-    exit;
+    json_response(["success" => false, "message" => "ID tidak valid."], 400);
 }
 
-$query = $conn->prepare("DELETE FROM users WHERE id=?");
-$query->bind_param("i", $id);
+$result = $supabase->delete("users", "id=eq." . urlencode($id));
 
-if ($query->execute()) {
-    echo json_encode(["success" => true, "message" => "User berhasil dihapus."]);
-} else {
-    echo json_encode(["success" => false, "message" => "Gagal menghapus user."]);
+if ($result['status'] !== 'success') {
+    json_response(["success" => false, "message" => supabase_error($result, "Gagal menghapus user.")], 500);
 }
+
+echo json_encode(["success" => true, "message" => "User berhasil dihapus."]);

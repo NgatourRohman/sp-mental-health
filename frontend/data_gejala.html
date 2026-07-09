@@ -14,6 +14,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Data Gejala - Sistem Pakar</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="js/config.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
     <style>
         body {
@@ -144,7 +145,7 @@
 
         async function loadGangguanDropdown() {
             try {
-                var res = await fetch("php/gangguan_get.php");
+                var res = await fetch(CONFIG.API_BASE_URL + "gangguan_get.php");
                 var data = await res.json();
                 var select = document.getElementById("selectGangguan");
                 for (var i = 0; i < data.length; i++) {
@@ -162,7 +163,7 @@
 
         async function loadGejala() {
             try {
-                var res = await fetch("php/gejala_get.php");
+                var res = await fetch(CONFIG.API_BASE_URL + "gejala_get.php");
                 var data = await res.json();
                 localStorage.setItem("data_gejala", JSON.stringify(data));
 
@@ -242,7 +243,7 @@
             form.append("nama_gejala", document.getElementById("namaGejala").value);
             form.append("kode_gangguan", document.getElementById("selectGangguan").value);
 
-            var res = await fetch(id ? "php/gejala_update.php" : "php/gejala_add.php", {
+            var res = await fetch(CONFIG.API_BASE_URL + (id ? "gejala_update.php" : "gejala_add.php"), {
                 method: "POST",
                 body: form
             });
@@ -259,7 +260,7 @@
             form.append("id", id);
             form.append("aktif", String(currentStatus) === "1" ? 0 : 1);
 
-            var res = await fetch("php/gejala_toggle_status.php", {
+            var res = await fetch(CONFIG.API_BASE_URL + "gejala_toggle_status.php", {
                 method: "POST",
                 body: form
             });
@@ -273,7 +274,7 @@
             var form = new FormData();
             form.append("id", id);
 
-            var res = await fetch("php/gejala_delete.php", {
+            var res = await fetch(CONFIG.API_BASE_URL + "gejala_delete.php", {
                 method: "POST",
                 body: form
             });

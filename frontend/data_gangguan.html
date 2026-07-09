@@ -14,6 +14,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Data Gangguan - Sistem Pakar</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="js/config.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     <style>
         body {
@@ -127,7 +128,7 @@
 
         async function loadData() {
             try {
-                const res = await fetch("php/gangguan_get.php");
+                const res = await fetch(CONFIG.API_BASE_URL + "gangguan_get.php");
                 gangguanList = await res.json();
             } catch (e) {
                 gangguanList = [];
@@ -201,10 +202,10 @@
             formData.append("deskripsi", deskripsi.value.trim());
 
             const id = idInput.value;
-            let url = "php/gangguan_add.php";
+            let url = CONFIG.API_BASE_URL + "gangguan_add.php";
             if (id) {
                 formData.append("id", id);
-                url = "php/gangguan_edit.php";
+                url = CONFIG.API_BASE_URL + "gangguan_edit.php";
             }
 
             try {
@@ -244,7 +245,7 @@
             form.append("id", id);
 
             try {
-                const res = await fetch("php/gangguan_delete.php", {
+                const res = await fetch(CONFIG.API_BASE_URL + "gangguan_delete.php", {
                     method: "POST",
                     body: form
                 });

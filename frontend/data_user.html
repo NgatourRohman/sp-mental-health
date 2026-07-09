@@ -14,6 +14,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Data User - Sistem Pakar</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="js/config.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
     <style>
         body {
@@ -280,7 +281,7 @@
             var key = String(email).toLowerCase();
             if (profileCache[key]) return profileCache[key];
             try {
-                var r = await fetch("php/data_diri_get.php?email=" + encodeURIComponent(email));
+                var r = await fetch(CONFIG.API_BASE_URL + "data_diri_get.php?email=" + encodeURIComponent(email));
                 var j = await r.json();
                 var data = (j && j.status === "success" && j.data) ? j.data : {};
                 profileCache[key] = data;
@@ -301,7 +302,7 @@
         // ===== Main Flows =====
         async function muatDataUser() {
             try {
-                var res = await fetch("php/users_get.php");
+                var res = await fetch(CONFIG.API_BASE_URL + "users_get.php");
                 var users = await res.json();
                 usersCache = Array.isArray(users) ? users : [];
                 tbody.innerHTML = "";
@@ -310,7 +311,8 @@
                         return (user.role || "").toLowerCase() === "siswa";
                     })
                     .forEach(function (user) {
-                        var idTampil = "U" + String(user.id).padStart(3, '0');
+                        var idTampil = user.id_tampil || ("U" + String(user.id).slice(0, 8));
+                        var idEnc = encodeURIComponent(user.id || "");
                         var namaEnc = encodeURIComponent(user.nama || "");
                         var emailEnc = encodeURIComponent(user.email || "");
                         var tr = document.createElement("tr");
@@ -321,10 +323,10 @@
                             '<td class="px-6 py-4">' + escapeHtml(user.email) + '</td>' +
                             '<td class="px-6 py-4">Siswa</td>' +
                             '<td class="px-6 py-4 space-x-2">' +
-                            '<button onclick="tampilFormUbah(' + user.id + ', \'' + namaEnc + '\', \'' +
+                            '<button onclick="tampilFormUbah(\'' + idEnc + '\', \'' + namaEnc + '\', \'' +
                             emailEnc +
                             '\')" class="px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600">Ubah</button> ' +
-                            '<button onclick="hapusUser(' + user.id +
+                            '<button onclick="hapusUser(\'' + idEnc +
                             ')" class="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600">Hapus</button> ' +
                             '<button onclick="lihatRiwayat(\'' + emailEnc +
                             '\')" class="px-3 py-1 bg-teal-500 text-white rounded hover:bg-teal-600">Lihat Riwayat</button>' +
@@ -360,7 +362,7 @@
                     var email = u.email || "";
                     var hasil = {};
                     try {
-                        var r = await fetch("php/hasil_diagnosa_get.php?email=" +
+                        var r = await fetch(CONFIG.API_BASE_URL + "hasil_diagnosa_get.php?email=" +
                             encodeURIComponent(email));
                         hasil = await r.json();
                     } catch (e) {
@@ -380,7 +382,7 @@
                     return {
                         adaHasil: !!(hasil && hasil.kondisi),
                         row: {
-                            id_tampil: "U" + String(u.id).padStart(3, "0"),
+                            id_tampil: u.id_tampil || ("U" + String(u.id).slice(0, 8)),
                             nama: u.nama || "-",
                             email: email || "-",
                             jenis_kelamin: jk || "-",
@@ -436,7 +438,7 @@
         function cetakDataSiswa() {
             const siapCetak = usersCache.filter(u => (u.role || "").toLowerCase() === "siswa")
                 .map(u => ({
-                    id_tampil: "U" + String(u.id).padStart(3, "0"),
+                    id_tampil: u.id_tampil || ("U" + String(u.id).slice(0, 8)),
                     nama: u.nama,
                     email: u.email,
                     peran: "Siswa"
@@ -471,7 +473,7 @@
 
         function tampilFormUbah(id, namaEnc, emailEnc) {
             document.getElementById("formTitle").textContent = "Ubah User";
-            document.getElementById("userId").value = id;
+            document.getElementById("userId").value = decodeURIComponent(id || "");
             document.getElementById("namaInput").value = decodeURIComponent(namaEnc || "");
             document.getElementById("emailInput").value = decodeURIComponent(emailEnc || "");
             document.getElementById("passwordInput").value = "";
@@ -498,7 +500,7 @@
         }
         async function hapusUser(id) {
             if (confirm("Yakin ingin menghapus user ini?")) {
-                var res = await fetch("php/user_delete.php?id=" + id);
+                var res = await fetch(CONFIG.API_BASE_URL + "user_delete.php?id=" + encodeURIComponent(decodeURIComponent(id || "")));
                 var result = await res.json();
                 alert(result.message);
                 muatDataUser();
@@ -517,6 +519,43 @@
         }
 
         document.addEventListener("DOMContentLoaded", muatDataUser);
+
+        document.getElementById("formUser").addEventListener("submit", async function (e) {
+            e.preventDefault();
+
+            var id = document.getElementById("userId").value;
+            var nama = document.getElementById("namaInput").value.trim();
+            var email = document.getElementById("emailInput").value.trim();
+            var password = document.getElementById("passwordInput").value;
+
+            if (!nama || !email || (!id && !password)) {
+                alert(id ? "Nama dan email wajib diisi." : "Nama, email, dan password wajib diisi.");
+                return;
+            }
+
+            var form = new FormData();
+            form.append("nama", nama);
+            form.append("email", email);
+            if (id) form.append("id", id);
+            if (password) form.append("password", password);
+
+            var endpoint = id ? "user_update.php" : "user_add.php";
+            try {
+                var res = await fetch(CONFIG.API_BASE_URL + endpoint, {
+                    method: "POST",
+                    body: form
+                });
+                var result = await res.json();
+                alert(result.message || (result.success ? "Data tersimpan." : "Gagal menyimpan data."));
+                if (result.success) {
+                    tutupForm();
+                    muatDataUser();
+                }
+            } catch (err) {
+                alert("Terjadi kesalahan saat menyimpan user.");
+                console.error(err);
+            }
+        });
     </script>
 </body>
 

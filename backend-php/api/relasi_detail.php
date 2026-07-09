@@ -1,32 +1,28 @@
 <?php
-header("Content-Type: application/json");
-include 'koneksi.php';
+require_once 'bootstrap.php';
 
-$kode = $_GET['kode'] ?? '';
+$supabase = get_supabase();
+$kode = get_value('kode');
 
 if (!$kode) {
     echo json_encode([]);
     exit;
 }
 
-try {
-    $stmt = $conn->prepare("
-        SELECT g.nama, gj.nama_gejala 
-        FROM gejala gj 
-        JOIN gangguan g ON gj.kode_gangguan = g.kode 
-        WHERE g.kode = ?
-    ");
-    $stmt->bind_param("s", $kode);
-    $stmt->execute();
-    $result = $stmt->get_result();
+$gangguanRes = $supabase->fetch("gangguan", "kode=eq." . urlencode($kode) . "&select=nama&limit=1");
+$gejalaRes = $supabase->fetch("gejala", "kode_gangguan=eq." . urlencode($kode) . "&select=nama_gejala&order=kode_gejala.asc");
 
-    $data = [];
-    while ($row = $result->fetch_assoc()) {
-        $data[] = $row;
-    }
-
-    echo json_encode($data);
-} catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode(["error" => $e->getMessage()]);
+if ($gejalaRes['status'] !== 'success') {
+    json_response(["error" => supabase_error($gejalaRes)], 500);
 }
+
+$namaGangguan = $gangguanRes['data'][0]['nama'] ?? "";
+$data = [];
+foreach (($gejalaRes['data'] ?? []) as $row) {
+    $data[] = [
+        "nama" => $namaGangguan,
+        "nama_gejala" => $row['nama_gejala'] ?? ""
+    ];
+}
+
+echo json_encode($data);

@@ -1,22 +1,26 @@
 <?php
-include 'koneksi.php';
+require_once 'bootstrap.php';
 
-$id = $_POST['id'] ?? '';
-$kode = $_POST['kode'] ?? '';
-$nama = $_POST['nama'] ?? '';
-$deskripsi = $_POST['deskripsi'] ?? '';
+require_post();
+$supabase = get_supabase();
+
+$id = post_value('id');
+$kode = post_value('kode');
+$nama = post_value('nama');
+$deskripsi = post_value('deskripsi');
 
 if (!$id || !$kode || !$nama) {
-    echo json_encode(["status" => "error", "message" => "Data tidak lengkap"]);
-    exit;
+    json_response(["status" => "error", "message" => "Data tidak lengkap"], 400);
 }
 
-try {
-    $stmt = $conn->prepare("UPDATE gangguan SET kode = ?, nama = ?, deskripsi = ? WHERE id = ?");
-    $stmt->bind_param("sssi", $kode, $nama, $deskripsi, $id);
-    $stmt->execute();
+$result = $supabase->update("gangguan", [
+    "kode" => $kode,
+    "nama" => $nama,
+    "deskripsi" => $deskripsi
+], "id=eq." . urlencode($id));
 
-    echo json_encode(["status" => "success", "message" => "Data gangguan berhasil diubah"]);
-} catch (Exception $e) {
-    echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+if ($result['status'] !== 'success') {
+    json_response(["status" => "error", "message" => supabase_error($result, "Gagal mengubah gangguan.")], 500);
 }
+
+echo json_encode(["status" => "success", "message" => "Data gangguan berhasil diubah"]);

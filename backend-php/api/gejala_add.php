@@ -1,21 +1,26 @@
 <?php
-header("Content-Type: application/json");
-include 'koneksi.php';
+require_once 'bootstrap.php';
 
-$kode_gejala = $_POST['kode_gejala'] ?? '';
-$nama_gejala = $_POST['nama_gejala'] ?? '';
-$kode_gangguan = $_POST['kode_gangguan'] ?? '';
+require_post();
+$supabase = get_supabase();
+
+$kode_gejala = post_value('kode_gejala');
+$nama_gejala = post_value('nama_gejala');
+$kode_gangguan = post_value('kode_gangguan');
 
 if (empty($kode_gejala) || empty($nama_gejala) || empty($kode_gangguan)) {
-    echo json_encode(["status" => "error", "message" => "Semua field harus diisi."]);
-    exit;
+    json_response(["status" => "error", "message" => "Semua field harus diisi."], 400);
 }
 
-$stmt = $conn->prepare("INSERT INTO gejala (kode_gejala, nama_gejala, kode_gangguan) VALUES (?, ?, ?)");
-$stmt->bind_param("sss", $kode_gejala, $nama_gejala, $kode_gangguan);
+$result = $supabase->insert("gejala", [
+    "kode_gejala" => $kode_gejala,
+    "nama_gejala" => $nama_gejala,
+    "kode_gangguan" => $kode_gangguan,
+    "aktif" => true
+]);
 
-if ($stmt->execute()) {
-    echo json_encode(["status" => "success", "message" => "Gejala berhasil ditambahkan."]);
-} else {
-    echo json_encode(["status" => "error", "message" => "Gagal menambahkan gejala."]);
+if ($result['status'] !== 'success') {
+    json_response(["status" => "error", "message" => supabase_error($result, "Gagal menambahkan gejala.")], 500);
 }
+
+echo json_encode(["status" => "success", "message" => "Gejala berhasil ditambahkan."]);
