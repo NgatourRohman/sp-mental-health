@@ -53,6 +53,27 @@ Contoh konfigurasi tersedia di `.env.example`.
 - Endpoint PHP utama memakai Supabase REST API melalui `backend-php/core/SupabaseHelper.php`.
 - File `backend-php/api/koneksi.php` dipertahankan sebagai stub deprecated dan akan memberi error jika endpoint lama masih memanggil MySQL.
 
+## ☁️ Deploy Render
+Deploy dua Web Service terpisah:
+
+1. Backend PHP
+   - Root Directory: `backend-php`
+   - Runtime: `Docker`
+   - Health Check Path: `/api/health.php`
+   - Environment Variables:
+     - `SUPABASE_URL`
+     - `SUPABASE_KEY`
+     - `PYTHON_API_URL`
+     - `API_KEY_PASKIBRA`
+
+2. ML Python
+   - Root Directory: `ml-python`
+   - Runtime: `Python 3`
+   - Build Command: `pip install -r requirements.txt`
+   - Start Command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+   - Environment Variables:
+     - `API_KEY_PASKIBRA`
+
 ## 📝 Lisensi
 Proyek ini dibuat untuk tujuan akademik dan pengembangan kesehatan mental.
 
