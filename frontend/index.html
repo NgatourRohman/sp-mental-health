@@ -8,6 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     <script src="js/config.js"></script>
+    <script src="js/supabase-api.js"></script>
     <style>
         body {
             font-family: 'Poppins', sans-serif;
@@ -41,21 +42,12 @@
             const email = document.getElementById("email").value;
             const password = document.getElementById("password").value;
 
-            const formData = new FormData();
-            formData.append("email", email);
-            formData.append("password", password);
-
             try {
-                const response = await fetch(CONFIG.API_BASE_URL + "login.php", {
-                    method: "POST",
-                    body: formData,
-                });
-
-                const data = await response.json();
+                const data = await SPDB.login(email, password);
                 if (data.status === "success") {
                     alert("Login berhasil sebagai " + data.role);
                     localStorage.setItem("nama", data.nama);
-                    localStorage.setItem("email", data.email); // email dari response PHP
+                    localStorage.setItem("email", data.email);
                     localStorage.setItem("role", data.role);
                     window.location.href = data.role === "admin" ? "admin_dashboard.html" :
                         "user_dashboard.html";

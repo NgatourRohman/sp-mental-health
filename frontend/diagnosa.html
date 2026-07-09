@@ -15,6 +15,7 @@
     <title>Diagnosa - Sistem Pakar</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="js/config.js"></script>
+    <script src="js/supabase-api.js"></script>
     <style>
         body {
             font-family: 'Poppins', sans-serif;
@@ -132,9 +133,7 @@
                 // (Opsional) tampilkan loading saat awal fetch
                 showLoading(true);
 
-                const res = await fetch(CONFIG.API_BASE_URL + "gejala_get.php");
-                if (!res.ok) throw new Error("Gagal mengambil data gejala.");
-                const data = await res.json();
+                const data = (await SPDB.getGejala()).filter(g => String(g.aktif) === "1");
 
                 if (!Array.isArray(data) || data.length === 0) {
                     formEl.innerHTML = "<p class='text-red-500'>Tidak ada data gejala yang tersedia.</p>";
@@ -237,11 +236,7 @@
 
                     try {
                         showLoading(true);
-                        const response = await fetch(CONFIG.API_BASE_URL + "proses_diagnosa.php", {
-                            method: "POST",
-                            body: formData
-                        });
-                        const result = await response.json();
+                        const result = await SPDB.processDiagnosis(email, jawaban);
 
                         if (result.status === "success") {
                             localStorage.setItem("diagnosa", JSON.stringify(result));

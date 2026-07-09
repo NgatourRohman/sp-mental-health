@@ -7,6 +7,7 @@
   <title>Riwayat Diagnosa Pengguna</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="js/config.js"></script>
+    <script src="js/supabase-api.js"></script>
   <style>
     body {
       font-family: 'Poppins', sans-serif;
@@ -49,8 +50,7 @@
       }
 
       try {
-        const response = await fetch(CONFIG.API_BASE_URL + `riwayat_diagnosa.php?email=${encodeURIComponent(email)}`);
-        const data = await response.json();
+        const data = await SPDB.getDiagnosisHistory(email);
 
         if (!Array.isArray(data) || data.length === 0) {
           container.innerHTML = "<p class='text-gray-600'>Tidak ada riwayat diagnosa yang tersedia.</p>";

@@ -15,6 +15,7 @@
     <title>Data User - Sistem Pakar</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="js/config.js"></script>
+    <script src="js/supabase-api.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
     <style>
         body {
@@ -281,9 +282,7 @@
             var key = String(email).toLowerCase();
             if (profileCache[key]) return profileCache[key];
             try {
-                var r = await fetch(CONFIG.API_BASE_URL + "data_diri_get.php?email=" + encodeURIComponent(email));
-                var j = await r.json();
-                var data = (j && j.status === "success" && j.data) ? j.data : {};
+                var data = await SPDB.getProfile(email) || {};
                 profileCache[key] = data;
                 return data;
             } catch (e) {
@@ -302,8 +301,7 @@
         // ===== Main Flows =====
         async function muatDataUser() {
             try {
-                var res = await fetch(CONFIG.API_BASE_URL + "users_get.php");
-                var users = await res.json();
+                var users = await SPDB.getUsers();
                 usersCache = Array.isArray(users) ? users : [];
                 tbody.innerHTML = "";
 
@@ -362,9 +360,7 @@
                     var email = u.email || "";
                     var hasil = {};
                     try {
-                        var r = await fetch(CONFIG.API_BASE_URL + "hasil_diagnosa_get.php?email=" +
-                            encodeURIComponent(email));
-                        hasil = await r.json();
+                        hasil = await SPDB.getLatestDiagnosis(email);
                     } catch (e) {
                         hasil = {};
                     }
@@ -500,8 +496,7 @@
         }
         async function hapusUser(id) {
             if (confirm("Yakin ingin menghapus user ini?")) {
-                var res = await fetch(CONFIG.API_BASE_URL + "user_delete.php?id=" + encodeURIComponent(decodeURIComponent(id || "")));
-                var result = await res.json();
+                var result = await SPDB.deleteUser(decodeURIComponent(id || ""));
                 alert(result.message);
                 muatDataUser();
             }
@@ -533,19 +528,9 @@
                 return;
             }
 
-            var form = new FormData();
-            form.append("nama", nama);
-            form.append("email", email);
-            if (id) form.append("id", id);
-            if (password) form.append("password", password);
-
-            var endpoint = id ? "user_update.php" : "user_add.php";
             try {
-                var res = await fetch(CONFIG.API_BASE_URL + endpoint, {
-                    method: "POST",
-                    body: form
-                });
-                var result = await res.json();
+                var payload = { nama: nama, email: email, password: password };
+                var result = id ? await SPDB.updateUser(id, payload) : await SPDB.addUser(payload);
                 alert(result.message || (result.success ? "Data tersimpan." : "Gagal menyimpan data."));
                 if (result.success) {
                     tutupForm();

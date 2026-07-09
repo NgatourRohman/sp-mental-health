@@ -15,6 +15,7 @@
     <title>Data Gangguan - Sistem Pakar</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="js/config.js"></script>
+    <script src="js/supabase-api.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     <style>
         body {
@@ -128,8 +129,7 @@
 
         async function loadData() {
             try {
-                const res = await fetch(CONFIG.API_BASE_URL + "gangguan_get.php");
-                gangguanList = await res.json();
+                gangguanList = await SPDB.getGangguan();
             } catch (e) {
                 gangguanList = [];
                 console.error(e);
@@ -201,19 +201,14 @@
             formData.append("nama", nama.value.trim());
             formData.append("deskripsi", deskripsi.value.trim());
 
-            const id = idInput.value;
-            let url = CONFIG.API_BASE_URL + "gangguan_add.php";
-            if (id) {
-                formData.append("id", id);
-                url = CONFIG.API_BASE_URL + "gangguan_edit.php";
-            }
-
             try {
-                const res = await fetch(url, {
-                    method: "POST",
-                    body: formData
-                });
-                const result = await res.json();
+                const id = idInput.value;
+                const payload = {
+                    kode: formData.get("kode"),
+                    nama: formData.get("nama"),
+                    deskripsi: formData.get("deskripsi")
+                };
+                const result = id ? await SPDB.updateGangguan(id, payload) : await SPDB.addGangguan(payload);
                 alert(result.message);
                 if (result.status === "success") {
                     closeModal();
@@ -245,11 +240,7 @@
             form.append("id", id);
 
             try {
-                const res = await fetch(CONFIG.API_BASE_URL + "gangguan_delete.php", {
-                    method: "POST",
-                    body: form
-                });
-                const result = await res.json();
+                const result = await SPDB.deleteGangguan(id);
                 alert(result.message);
                 if (result.status === "success") loadData();
             } catch (err) {

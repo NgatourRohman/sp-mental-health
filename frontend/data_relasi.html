@@ -15,6 +15,7 @@
     <title>Data Relasi - Sistem Pakar</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="js/config.js"></script>
+    <script src="js/supabase-api.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
     <style>
         body {
@@ -94,10 +95,7 @@
 
             var container = document.getElementById("gangguanContainer");
 
-            fetch(CONFIG.API_BASE_URL + "gangguan_get.php")
-                .then(function (res) {
-                    return res.json();
-                })
+            SPDB.getGangguan()
                 .then(function (data) {
                     if (!data || !data.length) {
                         container.innerHTML =

@@ -39,7 +39,7 @@ CREATE TABLE hasil_diagnosa (
     waktu_diagnosa TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 5. Tabel Diagnosa Cache (Untuk efisiensi Render Free Tier)
+-- 5. Tabel Diagnosa Cache
 CREATE TABLE diagnosa_cache (
     hash_input VARCHAR(64) PRIMARY KEY,
     result_json JSONB NOT NULL,
@@ -93,3 +93,36 @@ CREATE INDEX idx_diagnosa_detail_lookup ON diagnosa_detail(gangguan, tingkat);
 CREATE INDEX idx_user_profile_email ON user_profile(email);
 CREATE INDEX idx_relasi_gangguan ON relasi(kode_gangguan);
 CREATE INDEX idx_relasi_gejala ON relasi(kode_gejala);
+
+-- MODE FRONTEND-ONLY
+-- Aplikasi Vercel mengakses Supabase langsung memakai anon key.
+-- Policy berikut permisif untuk kebutuhan akademik/demo. Untuk production,
+-- ganti dengan Supabase Auth + RLS per-user/per-role.
+ALTER TABLE gangguan ENABLE ROW LEVEL SECURITY;
+ALTER TABLE gejala ENABLE ROW LEVEL SECURITY;
+ALTER TABLE diagnosa_detail ENABLE ROW LEVEL SECURITY;
+ALTER TABLE hasil_diagnosa ENABLE ROW LEVEL SECURITY;
+ALTER TABLE diagnosa_cache ENABLE ROW LEVEL SECURITY;
+ALTER TABLE rate_limits ENABLE ROW LEVEL SECURITY;
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_profile ENABLE ROW LEVEL SECURITY;
+ALTER TABLE relasi ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "anon_all_gangguan" ON gangguan FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "anon_all_gejala" ON gejala FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "anon_all_diagnosa_detail" ON diagnosa_detail FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "anon_all_hasil_diagnosa" ON hasil_diagnosa FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "anon_all_diagnosa_cache" ON diagnosa_cache FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "anon_all_rate_limits" ON rate_limits FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "anon_all_users" ON users FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "anon_all_user_profile" ON user_profile FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "anon_all_relasi" ON relasi FOR ALL USING (true) WITH CHECK (true);
+
+-- Akun demo frontend-only. Password disimpan sebagai SHA-256 hex.
+-- arthur@example.com / arthur123
+-- siswa@example.com / siswa123
+INSERT INTO users (nama, email, password, role)
+VALUES
+    ('Arthur', 'arthur@example.com', 'f1f9f057b94641c3ca7ce494feabeb33056f1ca96e767438b6ee0286d1dc4116', 'admin'),
+    ('Siswa', 'siswa@example.com', 'ca82d8a67832679fdc39c9156f087e31236b833ee7371eb3d6e081aeb90016c9', 'siswa')
+ON CONFLICT (email) DO NOTHING;

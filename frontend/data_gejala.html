@@ -15,6 +15,7 @@
     <title>Data Gejala - Sistem Pakar</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="js/config.js"></script>
+    <script src="js/supabase-api.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
     <style>
         body {
@@ -145,8 +146,7 @@
 
         async function loadGangguanDropdown() {
             try {
-                var res = await fetch(CONFIG.API_BASE_URL + "gangguan_get.php");
-                var data = await res.json();
+                var data = await SPDB.getGangguan();
                 var select = document.getElementById("selectGangguan");
                 for (var i = 0; i < data.length; i++) {
                     var item = data[i];
@@ -163,8 +163,7 @@
 
         async function loadGejala() {
             try {
-                var res = await fetch(CONFIG.API_BASE_URL + "gejala_get.php");
-                var data = await res.json();
+                var data = await SPDB.getGejala();
                 localStorage.setItem("data_gejala", JSON.stringify(data));
 
                 var tbody = document.getElementById("tabelGejala");
@@ -243,11 +242,12 @@
             form.append("nama_gejala", document.getElementById("namaGejala").value);
             form.append("kode_gangguan", document.getElementById("selectGangguan").value);
 
-            var res = await fetch(CONFIG.API_BASE_URL + (id ? "gejala_update.php" : "gejala_add.php"), {
-                method: "POST",
-                body: form
-            });
-            var result = await res.json();
+            var payload = {
+                kode_gejala: form.get("kode_gejala"),
+                nama_gejala: form.get("nama_gejala"),
+                kode_gangguan: form.get("kode_gangguan")
+            };
+            var result = id ? await SPDB.updateGejala(id, payload) : await SPDB.addGejala(payload);
             alert(result.message);
             if (result.status === "success") {
                 tutupModal();
@@ -260,11 +260,7 @@
             form.append("id", id);
             form.append("aktif", String(currentStatus) === "1" ? 0 : 1);
 
-            var res = await fetch(CONFIG.API_BASE_URL + "gejala_toggle_status.php", {
-                method: "POST",
-                body: form
-            });
-            var result = await res.json();
+            var result = await SPDB.toggleGejala(id, String(currentStatus) !== "1");
             alert(result.message);
             if (result.status === "success") location.reload();
         }
@@ -274,11 +270,7 @@
             var form = new FormData();
             form.append("id", id);
 
-            var res = await fetch(CONFIG.API_BASE_URL + "gejala_delete.php", {
-                method: "POST",
-                body: form
-            });
-            var result = await res.json();
+            var result = await SPDB.deleteGejala(id);
             alert(result.message);
             if (result.status === "success") location.reload();
         }

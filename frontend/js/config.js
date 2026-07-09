@@ -1,5 +1,4 @@
 const CONFIG = {
-    API_BASE_URL: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-        ? '../backend-php/api/'
-        : 'https://your-backend-service.onrender.com/api/'
+    SUPABASE_URL: 'https://your-project.supabase.co',
+    SUPABASE_ANON_KEY: 'your-supabase-anon-key'
 };

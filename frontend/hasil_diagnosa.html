@@ -14,6 +14,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Hasil Diagnosa - Sistem Pakar</title>
     <script src="js/config.js"></script>
+    <script src="js/supabase-api.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     <style>
         body {
@@ -125,8 +126,7 @@
             }
 
             try {
-                const res = await fetch(CONFIG.API_BASE_URL + `hasil_diagnosa_get.php?email=${encodeURIComponent(email)}`);
-                const data = await res.json();
+                const data = await SPDB.getLatestDiagnosis(email);
 
                 if (data.error) {
                     alert("Error: " + data.error);
@@ -163,11 +163,8 @@
                 // Simpan data siap-cetak (profil ringkas)
                 let jenisKelamin = "-";
                 try {
-                    const profilRes = await fetch(
-                        CONFIG.API_BASE_URL + `data_diri_get.php?email=${encodeURIComponent(email)}`);
-                    const profilJson = await profilRes.json();
-                    jenisKelamin = (profilJson && profilJson.data && (profilJson.data.jenis_kelamin ||
-                        profilJson.data.gender)) || "-";
+                    const profilJson = await SPDB.getProfile(email);
+                    jenisKelamin = (profilJson && (profilJson.jenis_kelamin || profilJson.gender)) || "-";
                 } catch (_) {}
 
                 const laporanObj = {

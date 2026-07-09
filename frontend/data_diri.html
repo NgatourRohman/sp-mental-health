@@ -15,6 +15,7 @@
     <title>Data Diri - Sistem Pakar</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="js/config.js"></script>
+    <script src="js/supabase-api.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     <style>
         body {
@@ -133,8 +134,8 @@
 
             // Ambil data existing
             try {
-                const res = await fetch(CONFIG.API_BASE_URL + "data_diri_get.php?email=" + encodeURIComponent(email));
-                const data = await res.json();
+                const profile = await SPDB.getProfile(email);
+                const data = profile ? { status: "success", data: profile } : { status: "not_found" };
 
                 if (data.status === "success" && data.data) {
                     document.getElementById("nama").value = data.data.nama || "";
@@ -158,11 +159,14 @@
                     e.preventDefault();
                     const formData = new FormData(this);
                     try {
-                        const res = await fetch(CONFIG.API_BASE_URL + "simpan_data_diri.php", {
-                            method: "POST",
-                            body: formData
+                        const result = await SPDB.saveProfile({
+                            email: formData.get("user_email"),
+                            nama: formData.get("nama"),
+                            tgl_lahir: formData.get("tgl_lahir"),
+                            jenis_kelamin: formData.get("jenis_kelamin"),
+                            alamat: formData.get("alamat"),
+                            no_telp: formData.get("no_telp")
                         });
-                        const result = await res.json();
                         if (result.status === "success") {
                             alert("Data berhasil disimpan!");
                             location.reload();
@@ -183,11 +187,14 @@
                 btnUbah.addEventListener("click", async function () {
                     const formData = new FormData(document.getElementById("formDataDiri"));
                     try {
-                        const res = await fetch(CONFIG.API_BASE_URL + "simpan_data_diri.php", {
-                            method: "POST",
-                            body: formData
+                        const result = await SPDB.saveProfile({
+                            email: formData.get("user_email"),
+                            nama: formData.get("nama"),
+                            tgl_lahir: formData.get("tgl_lahir"),
+                            jenis_kelamin: formData.get("jenis_kelamin"),
+                            alamat: formData.get("alamat"),
+                            no_telp: formData.get("no_telp")
                         });
-                        const result = await res.json();
                         if (result.status === "success") {
                             alert("Data berhasil diperbarui!");
                             location.reload();

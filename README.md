@@ -1,80 +1,68 @@
-# 🧠 SP-Mental-Paskibra: Advanced Expert System
+# SP-Mental-Paskibra
 
-Sistem Pakar Kesehatan Mental Paskibra berbasis **Machine Learning (Gaussian Naive Bayes)** dengan arsitektur **Hybrid Cloud** yang dirancang untuk performa tinggi, keamanan, dan skalabilitas pada infrastruktur gratis (*Free Tier*).
+Sistem pakar kesehatan mental Paskibra berbasis **frontend statis + Supabase**. Aplikasi ini dirancang agar bisa berjalan gratis tanpa backend PHP/Render: Vercel menyajikan HTML/JS, sedangkan data dibaca dan ditulis langsung ke Supabase.
 
-## 🚀 Fitur Utama
-- **ML Inference Engine**: Menggunakan FastAPI untuk prediksi gangguan mental secara real-time.
-- **Hybrid Architecture**: Pemisahan Frontend (Vercel), Backend (PHP/Render), dan Database (Supabase).
-- **Smart Caching**: Sistem cache berbasis hash untuk mengurangi latensi dan beban server.
-- **Security & Stability**: 
-  - Rate Limiting (5 req/menit).
-  - Retry Strategy (mitigasi Cold Start).
-  - Environment variables protection.
-- **Admin Insight**: Dashboard analitik dengan visualisasi Chart.js dan fitur ekspor CSV.
+## Fitur Utama
+- Login sederhana berbasis tabel `users` di Supabase.
+- CRUD data gangguan, gejala, user, profil siswa, dan relasi.
+- Diagnosa langsung di browser memakai scoring gejala per gangguan.
+- Penyimpanan hasil diagnosa dan riwayat ke Supabase.
+- Dashboard admin dan insight Chart.js.
+- Laporan/cetak berbasis HTML dan `localStorage`.
 
-## 🛠️ Stack Teknologi
-- **Frontend**: HTML5, Tailwind CSS, JavaScript (ES6+).
-- **Backend**: PHP (Logic Optimizer) & Python FastAPI (ML Engine).
-- **Database**: Supabase (PostgreSQL).
-- **Deployment**: Vercel & Render.
+## Stack
+- Frontend: HTML5, Tailwind CDN, JavaScript.
+- Database/API: Supabase PostgreSQL + REST API.
+- Deployment gratis: Vercel Hobby + Supabase Free.
 
-## 📂 Struktur Proyek
-- `/frontend`: Interface pengguna dan aset web.
-- `/backend-php`: Logika bisnis, API Gateway, dan Suppabase Helper.
-- `/ml-python`: Service Machine Learning dan model `.pkl`.
-- `/supabase-schema`: Script inisialisasi database PostgreSQL.
+Folder `backend-php/` dan `ml-python/` dipertahankan sebagai arsip versi hybrid sebelumnya, tetapi alur frontend-only tidak membutuhkannya.
 
-## ⚙️ Penyiapan Environment Variable
-Pastikan variabel berikut dikonfigurasi pada dashboard **Render**:
-- `SUPABASE_URL`: URL REST API Supabase Anda.
-- `SUPABASE_KEY`: Service/Anon Key Supabase.
-- `PYTHON_API_URL`: URL deployment ML Service (tambahkan `/predict`).
-- `API_KEY_PASKIBRA`: Token rahasia untuk otentikasi antar-layanan.
-
-Contoh konfigurasi tersedia di `.env.example`.
-
-## ▶️ Menjalankan Lokal
-1. Jalankan skema `supabase-schema/initial_setup.sql` di Supabase SQL Editor.
-2. Set environment variable backend PHP sesuai `.env.example`.
-3. Jalankan backend PHP dari root project:
-   ```bash
-   php -S localhost:8000 -t backend-php
+## Setup Supabase
+1. Buat project di Supabase.
+2. Buka **SQL Editor**.
+3. Jalankan seluruh isi `supabase-schema/initial_setup.sql`.
+4. Buka **Project Settings** -> **API**.
+5. Salin:
+   - Project URL
+   - anon public key
+6. Isi `frontend/js/config.js`:
+   ```js
+   const CONFIG = {
+       SUPABASE_URL: 'https://your-project.supabase.co',
+       SUPABASE_ANON_KEY: 'your-supabase-anon-key'
+   };
    ```
-4. Jalankan ML service:
-   ```bash
-   cd ml-python
-   uvicorn main:app --reload --host 127.0.0.1 --port 8001
-   ```
-5. Atur `PYTHON_API_URL` ke `http://127.0.0.1:8001/predict`.
-6. Buka halaman di folder `frontend/`.
 
-## 🔧 Status Integrasi
-- Frontend memakai `frontend/js/config.js` sebagai satu sumber base URL API.
-- Endpoint PHP utama memakai Supabase REST API melalui `backend-php/core/SupabaseHelper.php`.
-- File `backend-php/api/koneksi.php` dipertahankan sebagai stub deprecated dan akan memberi error jika endpoint lama masih memanggil MySQL.
+Skema SQL sudah membuat akun demo:
+- Admin: `arthur@example.com` / `arthur123`
+- Siswa: `siswa@example.com` / `siswa123`
 
-## ☁️ Deploy Render
-Deploy dua Web Service terpisah:
+## Menjalankan Lokal
+Buka `frontend/index.html` langsung di browser, atau jalankan static server sederhana dari root:
 
-1. Backend PHP
-   - Root Directory: `backend-php`
-   - Runtime: `Docker`
-   - Health Check Path: `/api/health.php`
-   - Environment Variables:
-     - `SUPABASE_URL`
-     - `SUPABASE_KEY`
-     - `PYTHON_API_URL`
-     - `API_KEY_PASKIBRA`
+```bash
+python -m http.server 5500 -d frontend
+```
 
-2. ML Python
-   - Root Directory: `ml-python`
-   - Runtime: `Python 3`
-   - Build Command: `pip install -r requirements.txt`
-   - Start Command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
-   - Environment Variables:
-     - `API_KEY_PASKIBRA`
+Lalu buka:
 
-## 📝 Lisensi
+```text
+http://localhost:5500
+```
+
+## Deploy Vercel
+1. Import repo GitHub ke Vercel.
+2. Set:
+   - Framework Preset: `Other`
+   - Root Directory: `frontend`
+   - Build Command: kosong
+   - Output Directory: kosong/default
+3. Deploy.
+
+Setiap push ke branch `main` akan memicu redeploy otomatis.
+
+## Catatan Keamanan
+Mode frontend-only memakai anon key di browser dan RLS policy permisif untuk kebutuhan akademik/demo. Untuk production, gunakan Supabase Auth, policy per-role/per-user, dan jangan menaruh logika sensitif di browser.
+
+## Lisensi
 Proyek ini dibuat untuk tujuan akademik dan pengembangan kesehatan mental.
-
----
